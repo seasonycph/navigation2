@@ -391,6 +391,7 @@ StaticLayer::updateCosts(
     // Might even be in a different frame
     geometry_msgs::msg::TransformStamped transform;
     try {
+      
       transform = tf_->lookupTransform(
         map_frame_, global_frame_, tf2::TimePointZero,
         transform_tolerance_);

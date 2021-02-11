@@ -203,7 +203,7 @@ Costmap2DROS::on_activate(const rclcpp_lifecycle::State & /*state*/)
   rclcpp::Rate r(2);
   while (rclcpp::ok() &&
     !tf_buffer_->canTransform(
-      global_frame_, robot_base_frame_, tf2::TimePointZero, &tf_error))
+      global_frame_, robot_base_frame_,  tf2::TimePointZero, tf2::Duration(3) ,&tf_error))
   {
     RCLCPP_INFO(
       get_logger(), "Timed out waiting for transform from %s to %s"

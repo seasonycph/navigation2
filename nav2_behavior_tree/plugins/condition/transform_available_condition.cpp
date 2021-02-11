@@ -58,7 +58,7 @@ BT::NodeStatus TransformAvailableCondition::tick()
 
   std::string tf_error;
   bool found = tf_->canTransform(
-    child_frame_, parent_frame_, tf2::TimePointZero, &tf_error);
+    child_frame_, parent_frame_, tf2::TimePointZero, tf2::Duration(3), &tf_error);
 
   if (found) {
     was_found_ = true;
