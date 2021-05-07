@@ -262,6 +262,12 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
 
       // Apply curvature to angular velocity after constraining linear velocity
       angular_vel = linear_vel * curvature;
+      if (angular_vel > rotate_to_heading_angular_vel_){
+        angular_vel = rotate_to_heading_angular_vel_;
+      }
+      if (angular_vel < rotate_to_heading_angular_vel_ * -1){
+        angular_vel = rotate_to_heading_angular_vel_ * -1;
+      }
   }
 
   // Collision checking on this velocity heading
