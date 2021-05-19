@@ -279,7 +279,7 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   geometry_msgs::msg::TwistStamped cmd_vel;
   cmd_vel.header = pose.header;
   cmd_vel.twist.linear.x = linear_vel;
-
+  RCLCPP_INFO(logger_, "linear_vel final: %f", linear_vel);
   cmd_vel.twist.angular.z = angular_vel;
   return cmd_vel;
 }
@@ -466,6 +466,7 @@ void RegulatedPurePursuitController::applyConstraints(
 
     // Use the lowest velocity between approach and other constraints, if all overlapping
     linear_vel = std::min(linear_vel, approach_vel);
+    RCLCPP_INFO(logger_, "linear_vel after app scale: %f", linear_vel);
   }
 
   // Limit linear velocities to be valid and kinematically feasible, v = v0 + a * dt
@@ -474,6 +475,7 @@ void RegulatedPurePursuitController::applyConstraints(
   const double min_feasible_linear_speed = curr_speed.linear.x - max_linear_decel_ * dt;
   linear_vel = std::clamp(linear_vel, min_feasible_linear_speed, max_feasible_linear_speed);
   linear_vel = std::clamp(linear_vel, 0.0, desired_linear_vel_);
+  RCLCPP_INFO(logger_, "linear_vel after clamp: %f", linear_vel);
 }
 
 void RegulatedPurePursuitController::setPlan(const nav_msgs::msg::Path & path)
