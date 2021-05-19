@@ -279,6 +279,7 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   geometry_msgs::msg::TwistStamped cmd_vel;
   cmd_vel.header = pose.header;
   cmd_vel.twist.linear.x = linear_vel;
+
   cmd_vel.twist.angular.z = angular_vel;
   return cmd_vel;
 }
@@ -445,9 +446,13 @@ void RegulatedPurePursuitController::applyConstraints(
   }
 
   // Use the lowest of the 2 constraint heuristics, but above the minimum translational speed
+  RCLCPP_INFO(logger_, "linear_vel: %f", linear_vel);
+  RCLCPP_INFO(logger_, "cost_vel: %f", cost_vel);
+  RCLCPP_INFO(logger_, "curvature vel: %f", curvature_vel);
+  RCLCPP_INFO(logger_, "reg_speed: %f", regulated_linear_scaling_min_speed_);
   linear_vel = std::min(cost_vel, curvature_vel);
   linear_vel = std::max(linear_vel, regulated_linear_scaling_min_speed_);
-
+  RCLCPP_INFO(logger_, "linear_vel after: %f", linear_vel);
   // if the actual lookahead distance is shorter than requested, that means we're at the
   // end of the path. We'll scale linear velocity by error to slow to a smooth stop
   if (use_approach_vel_scaling_ && dist_error > 2.0 * costmap_->getResolution()) {

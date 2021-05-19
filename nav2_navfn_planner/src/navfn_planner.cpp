@@ -146,6 +146,16 @@ nav_msgs::msg::Path NavfnPlanner::createPlan(
       node_->get_logger(), "%s: failed to create plan with "
       "tolerance %.2f.", name_.c_str(), tolerance_);
   }
+  // int count = 0;
+  // while (!makePlan(start.pose, goal.pose, tolerance_, path)){
+  //   RCLCPP_WARN(
+  //     node_->get_logger(), "%s: failed to create plan with "
+  //     "tolerance %.2f.", name_.c_str(), tolerance_);
+  //     count = count + 1;
+  //     if (count > 100){
+  //       break;
+  //     }
+  // }
 
 #ifdef BENCHMARK_TESTING
   steady_clock::time_point b = steady_clock::now();
@@ -344,8 +354,8 @@ NavfnPlanner::getPlanFromPotential(
   planner_->setStart(map_goal);
 
   const int & max_cycles = (costmap_->getSizeInCellsX() >= costmap_->getSizeInCellsY()) ?
-    (costmap_->getSizeInCellsX() * 4) : (costmap_->getSizeInCellsY() * 4);
-
+    (costmap_->getSizeInCellsX() * 10) : (costmap_->getSizeInCellsY() * 10);
+  RCLCPP_INFO(node_->get_logger(), "MAX CYCLES, %i \n", max_cycles);
   int path_len = planner_->calcPath(max_cycles);
   if (path_len == 0) {
     return false;

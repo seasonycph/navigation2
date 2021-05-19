@@ -792,7 +792,7 @@ NavFn::calcPath(int n, int * st)
     }
 
     if (stc < nx || stc > ns - nx) {  // would be out of bounds
-      RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "[PathCalc] Out of bounds");
+      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "[PathCalc] Out of bounds");
       return 0;
     }
 
@@ -806,7 +806,7 @@ NavFn::calcPath(int n, int * st)
       pathx[npath - 1] == pathx[npath - 3] &&
       pathy[npath - 1] == pathy[npath - 3])
     {
-      RCLCPP_DEBUG(
+      RCLCPP_INFO(
         rclcpp::get_logger("rclcpp"),
         "[PathCalc] oscillation detected, attempting fix.");
       oscillation_detected = true;
@@ -827,7 +827,7 @@ NavFn::calcPath(int n, int * st)
       potarr[stcpx - 1] >= POT_HIGH ||
       oscillation_detected)
     {
-      RCLCPP_DEBUG(
+      RCLCPP_INFO(
         rclcpp::get_logger("rclcpp"),
         "[Path] Pot fn boundary, following grid (%0.1f/%d)", potarr[stc], npath);
 
@@ -854,17 +854,18 @@ NavFn::calcPath(int n, int * st)
       dx = 0;
       dy = 0;
 
-      RCLCPP_DEBUG(
+      RCLCPP_INFO(
         rclcpp::get_logger("rclcpp"), "[Path] Pot: %0.1f  pos: %0.1f,%0.1f",
         potarr[stc], pathx[npath - 1], pathy[npath - 1]);
 
       if (potarr[stc] >= POT_HIGH) {
-        RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "[PathCalc] No path found, high potential");
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "[PathCalc] No path found, high potential");
         // savemap("navfn_highpot");
         return 0;
       }
     } else {  // have a good gradient here
       // get grad at four positions near cell
+      
       gradCell(stc);
       gradCell(stc + 1);
       gradCell(stcnx);
@@ -891,7 +892,7 @@ NavFn::calcPath(int n, int * st)
 
       // check for zero gradient, failed
       if (x == 0.0 && y == 0.0) {
-        RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "[PathCalc] Zero gradient");
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "[PathCalc] Zero gradient");
         return 0;
       }
 
@@ -909,10 +910,13 @@ NavFn::calcPath(int n, int * st)
 
     //      ROS_INFO("[Path] Pot: %0.1f  grad: %0.1f,%0.1f  pos: %0.1f,%0.1f\n",
     //      potarr[stc], x, y, pathx[npath-1], pathy[npath-1]);
+    RCLCPP_INFO(
+        rclcpp::get_logger("rclcpp"),
+        "[Path] ELSE: Pot fn boundary, following grid (%0.1f/%d)", potarr[stc], npath);
   }
 
   //  return npath;  // out of cycles, return failure
-  RCLCPP_DEBUG(rclcpp::get_logger("rclcpp"), "[PathCalc] No path found, path too long");
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "[PathCalc] No path found, path too long");
   // savemap("navfn_pathlong");
   return 0;  // out of cycles, return failure
 }
