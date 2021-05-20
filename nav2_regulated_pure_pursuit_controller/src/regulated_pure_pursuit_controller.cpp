@@ -466,7 +466,7 @@ void RegulatedPurePursuitController::applyConstraints(
 
     // Use the lowest velocity between approach and other constraints, if all overlapping
     linear_vel = std::min(linear_vel, approach_vel);
-    RCLCPP_INFO(logger_, "linear_vel after app scale: %f", linear_vel);
+    //RCLCPP_INFO(logger_, "linear_vel after app scale: %f", linear_vel);
   }
 
   // Limit linear velocities to be valid and kinematically feasible, v = v0 + a * dt
