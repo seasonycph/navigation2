@@ -41,7 +41,9 @@
 #include <cstdio>
 #include <string>
 #include <vector>
-
+#include <chrono>
+#include <thread>
+#include <iostream>
 namespace nav2_costmap_2d
 {
 Costmap2D::Costmap2D(
@@ -53,6 +55,7 @@ Costmap2D::Costmap2D(
   access_ = new mutex_t();
 
   // create the costmap
+
   initMaps(size_x_, size_y_);
   resetMaps();
 }
@@ -68,6 +71,8 @@ void Costmap2D::deleteMaps()
 void Costmap2D::initMaps(unsigned int size_x, unsigned int size_y)
 {
   std::unique_lock<mutex_t> lock(*access_);
+  //dont delete the costmap? iterate over old values and overwrite with nothing?
+  //or check if costmap contains desired index?
   delete[] costmap_;
   costmap_ = new unsigned char[size_x * size_y];
 }
@@ -81,9 +86,7 @@ void Costmap2D::resizeMap(
   resolution_ = resolution;
   origin_x_ = origin_x;
   origin_y_ = origin_y;
-
   initMaps(size_x, size_y);
-
   // reset our maps to have no information
   resetMaps();
 }
@@ -172,7 +175,6 @@ Costmap2D & Costmap2D::operator=(const Costmap2D & map)
 
   // copy the cost map
   memcpy(costmap_, map.costmap_, size_x_ * size_y_ * sizeof(unsigned char));
-
   return *this;
 }
 
@@ -192,6 +194,7 @@ Costmap2D::Costmap2D()
 
 Costmap2D::~Costmap2D()
 {
+ 
   deleteMaps();
   delete access_;
 }
@@ -209,6 +212,25 @@ unsigned char * Costmap2D::getCharMap() const
 
 unsigned char Costmap2D::getCost(unsigned int mx, unsigned int my) const
 {
+  // try
+  // {
+  //   if ((costmap_ != NULL) && (costmap_[0] == '\0')) {
+  //     //printf("costmap val is empty\n");
+  //     std::cout << "costmap val is empty";
+  //   }
+
+  //   return costmap_[getIndex(mx, my)];
+  // }
+  // catch(const std::exception& e)
+  // {
+  //   std::cerr << e.what() << '\n';
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  //   return costmap_[getIndex(mx, my)];
+  // }
+  // if (!costmap_exists_){
+  //   std::cout << "false: " << costmap_exists_ << std::endl;
+  // }
+  
   return costmap_[getIndex(mx, my)];
 }
 

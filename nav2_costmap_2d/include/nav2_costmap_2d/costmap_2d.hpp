@@ -461,6 +461,7 @@ protected:
   double origin_x_;
   double origin_y_;
   unsigned char * costmap_;
+  bool costmap_exists_ = false;
   unsigned char default_value_;
 
   // *INDENT-OFF* Uncrustify doesn't handle indented public/private labels
