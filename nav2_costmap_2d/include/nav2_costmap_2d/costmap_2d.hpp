@@ -68,6 +68,8 @@ class Costmap2D
   friend class CostmapTester;  // Need this for gtest to work correctly
 
 public:
+  bool costmap_planner_ = false;
+  //int size = 0;
   /**
    * @brief  Constructor for a costmap
    * @param  cells_size_x The x size of the map in cells
@@ -76,6 +78,7 @@ public:
    * @param  origin_x The x origin of the map
    * @param  origin_y The y origin of the map
    * @param  default_value Default Value
+   * 
    */
   Costmap2D(
     unsigned int cells_size_x, unsigned int cells_size_y, double resolution,
@@ -461,7 +464,7 @@ protected:
   double origin_x_;
   double origin_y_;
   unsigned char * costmap_;
-  bool costmap_exists_ = false;
+  
   unsigned char default_value_;
 
   // *INDENT-OFF* Uncrustify doesn't handle indented public/private labels

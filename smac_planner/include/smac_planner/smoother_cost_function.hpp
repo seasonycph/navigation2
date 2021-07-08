@@ -135,7 +135,7 @@ public:
       addSmoothingResidual(_params.smooth_weight, xi, xi_p1, xi_m1, cost_raw);
       addCurvatureResidual(_params.curvature_weight, xi, xi_p1, xi_m1, curvature_params, cost_raw);
       addDistanceResidual(_params.distance_weight, xi, _original_path->at(i), cost_raw);
-
+      //_costmap->costmap_planner_ = true;
       if (valid_coords = _costmap->worldToMap(xi[0], xi[1], mx, my)) {
         costmap_cost = _costmap->getCost(mx, my);
         addCostResidual(_params.costmap_weight, costmap_cost, cost_raw);

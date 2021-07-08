@@ -75,6 +75,7 @@ void Costmap2D::initMaps(unsigned int size_x, unsigned int size_y)
   //or check if costmap contains desired index?
   delete[] costmap_;
   costmap_ = new unsigned char[size_x * size_y];
+  //size = size_x * size_y;
 }
 
 void Costmap2D::resizeMap(
@@ -230,7 +231,10 @@ unsigned char Costmap2D::getCost(unsigned int mx, unsigned int my) const
   // if (!costmap_exists_){
   //   std::cout << "false: " << costmap_exists_ << std::endl;
   // }
-  
+  // if (costmap_planner_){
+  //   std::cout << "index:" << getIndex(mx, my) << std::endl;
+  //   std::cout <<  "size: " << (size) << std::endl;
+  // }
   return costmap_[getIndex(mx, my)];
 }
 
