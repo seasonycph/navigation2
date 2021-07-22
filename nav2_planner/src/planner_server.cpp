@@ -437,7 +437,7 @@ PlannerServer::computePlan()
     }
 
     result->path = getPlan(start, goal_pose, goal->planner_id);
-    
+    nav_msgs::msg::Path new_path_ = result->path;
     //use old path if the goal does not change
     int current_path_size = current_path_.poses.size();
     int new_path_size = result->path.poses.size();
@@ -481,19 +481,16 @@ PlannerServer::computePlan()
       }
       RCLCPP_INFO(
       get_logger(), "Closest pose index along path from current position: %d. Previous points will be culled", closest_index);
-      //geometry_msgs::msg::PoseStamped unculled_poses = new geometry_msgs::msg::PoseStamped[current_path_size - (closest_index + 1)];
       std::vector<geometry_msgs::msg::PoseStamped> unculled_poses;
       unculled_poses = std::vector<geometry_msgs::msg::PoseStamped>(current_path_.poses.begin() + closest_index, current_path_.poses.end());
-      // for (int i = closest_index; i < current_path_size; i++)
-      // {
-      //   unculled_poses[i - closest_index] = current_path_.poses[i];
-      // }
       current_path_.poses = unculled_poses;
       result->path = current_path_;
     }
 
     //compare cost of new path vs old path 
-
+    //lock costmap
+    //iterate over all poses, convert wx, wy to mx, my - calc total cost.
+    //unlock costmap 
 
     RCLCPP_INFO(
       get_logger(), "Planned poses: %ld", result->path.poses.size());
