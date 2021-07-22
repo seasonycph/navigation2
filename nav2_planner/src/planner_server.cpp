@@ -59,7 +59,7 @@ PlannerServer::PlannerServer()
   // Setup the global costmap
   costmap_ros_ = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
     "global_costmap", std::string{get_namespace()}, "global_costmap");
-
+  //current_path_ = 
   // Launch a thread to run the costmap node
   costmap_thread_ = std::make_unique<nav2_util::NodeThread>(costmap_ros_);
 }
@@ -305,6 +305,7 @@ bool PlannerServer::validatePath(
       " path to (%.2f, %.2f)", planner_id.c_str(),
       goal.pose.position.x, goal.pose.position.y);
     action_server->terminate_current();
+    RCLCPP_INFO(get_logger(), "Path invalid!");
     return false;
   }
 
@@ -313,7 +314,7 @@ bool PlannerServer::validatePath(
     "Found valid path of size %lu to (%.2f, %.2f)",
     path.poses.size(), goal.pose.position.x,
     goal.pose.position.y);
-
+  RCLCPP_INFO(get_logger(), "Path valid!");
   return true;
 }
 
@@ -409,7 +410,7 @@ void
 PlannerServer::computePlan()
 {
   auto start_time = steady_clock_.now();
-
+  RCLCPP_INFO(get_logger(), "Compute plan called.");
   // Initialize the ComputePathToPose goal and result
   auto goal = action_server_pose_->get_current_goal();
   auto result = std::make_shared<ActionToPose::Result>();
@@ -436,7 +437,66 @@ PlannerServer::computePlan()
     }
 
     result->path = getPlan(start, goal_pose, goal->planner_id);
+    
+    //use old path if the goal does not change
+    int current_path_size = current_path_.poses.size();
+    int new_path_size = result->path.poses.size();
+    bool cull_points = false;
+    if (current_path_size == 0){
+      RCLCPP_INFO(get_logger(), "Current path was empty, filling.");
+      current_path_ = result->path;
+    } else if (current_path_size != 0 && new_path_size != 0) {
+      RCLCPP_INFO(get_logger(), "Current path is populated, checking if new path is same goal.");
+      geometry_msgs::msg::PoseStamped current_path_end = current_path_.poses[current_path_size - 1];
+      geometry_msgs::msg::PoseStamped new_path_end = result->path.poses[new_path_size - 1];
+      if ((current_path_end.pose.position.x == new_path_end.pose.position.x) && (current_path_end.pose.position.y == new_path_end.pose.position.y)){
+        RCLCPP_INFO(get_logger(), "Path end goal does not differ, not replacing current path.");
+        //TODO check similarity of current path and result path, they might have same goals but could differ vastly, in which case take the new path.
+        //result->path = current_path_;
+        cull_points = true;
+      } else {
+        current_path_ = result->path;
+        RCLCPP_INFO(get_logger(), "Path end goal differs, replacing current path with new path.");
+      }
+    }
+    
+    //cull previous points - this implementation could be an issue if the path ahead loops close to current position, thn we cull too many points..
+    if (cull_points){
+      geometry_msgs::msg::PoseStamped new_path_start = result->path.poses[0];
+      //calc distance to all points in current_path, find index where distance is shortest, cull points before that.
+      int closest_index = -1;
+      double distance = std::numeric_limits<double>::max();
+      double static_point_x = new_path_start.pose.position.x;
+      double static_point_y = new_path_start.pose.position.y; 
+      for (int i = 0; i < current_path_size; i++)
+      {
+        //distance from current position point to current_path[i] point
+        double moving_point_x = current_path_.poses[i].pose.position.x;
+        double moving_point_y = current_path_.poses[i].pose.position.y;
+        double cur_dist = sqrt(pow(static_point_x - moving_point_x, 2) + pow(static_point_y - moving_point_y, 2));
+        if (cur_dist < distance){
+          distance = cur_dist;
+          closest_index = i;
+        } 
+      }
+      RCLCPP_INFO(
+      get_logger(), "Closest pose index along path from current position: %d. Previous points will be culled", closest_index);
+      //geometry_msgs::msg::PoseStamped unculled_poses = new geometry_msgs::msg::PoseStamped[current_path_size - (closest_index + 1)];
+      std::vector<geometry_msgs::msg::PoseStamped> unculled_poses;
+      unculled_poses = std::vector<geometry_msgs::msg::PoseStamped>(current_path_.poses.begin() + closest_index, current_path_.poses.end());
+      // for (int i = closest_index; i < current_path_size; i++)
+      // {
+      //   unculled_poses[i - closest_index] = current_path_.poses[i];
+      // }
+      current_path_.poses = unculled_poses;
+      result->path = current_path_;
+    }
 
+    //compare cost of new path vs old path 
+
+
+    RCLCPP_INFO(
+      get_logger(), "Planned poses: %ld", result->path.poses.size());
     if (!validatePath(action_server_pose_, goal_pose, result->path, goal->planner_id)) {
       return;
     }
@@ -474,7 +534,10 @@ PlannerServer::getPlan(
     get_logger(), "Attempting to a find path from (%.2f, %.2f) to "
     "(%.2f, %.2f).", start.pose.position.x, start.pose.position.y,
     goal.pose.position.x, goal.pose.position.y);
-
+  RCLCPP_INFO(
+    get_logger(), "Attempting to a find path from (%.2f, %.2f) to "
+    "(%.2f, %.2f).", start.pose.position.x, start.pose.position.y,
+    goal.pose.position.x, goal.pose.position.y);
   if (planners_.find(planner_id) != planners_.end()) {
     return planners_[planner_id]->createPlan(start, goal);
   } else {
