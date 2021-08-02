@@ -600,7 +600,7 @@ namespace nav2_planner
         // RCLCPP_INFO(
         //     get_logger(), "Total pose points: %ld", current_path_.poses.size());
 
-        //percentage difference
+        //percentage difference, set to 1s as to avoid divide by 0
         if (total_cost_old == 0)
         {
           total_cost_old = 1;
@@ -620,32 +620,53 @@ namespace nav2_planner
         // as the inflation layer might oscillate a pixel or two. so when driving along the edge of two inflation layers, costs can increase/decrease.
         //if current cost values are higher than previous then wait / use_new path / fail
         //if using new path then clear current_path and current_costs
-        if (percentage > 1)
-        {
-          RCLCPP_INFO(
-              get_logger(), "Cost has risen more than 1p, using new path instead");
-          result->path = new_path_;
-          current_path_ = result->path;
-          double total_cost = 0;
-          current_path_costs_.clear();
-          for (long unsigned int i = 0; i < result->path.poses.size(); i++)
-          {
-            geometry_msgs::msg::PoseStamped ps = result->path.poses[i];
-            unsigned int mx;
-            unsigned int my;
-            costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
-            double cost = costmap_->getCost(mx, my);
-            //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
-            total_cost = total_cost + cost;
-            current_path_costs_.push_back(cost);
-          }
-          RCLCPP_INFO(
-              get_logger(), "Total cost: %.2f", total_cost);
+        if (percentage > 1 || percentage < -1) {
+          if (percentage > 1)
+            {
+              RCLCPP_INFO(
+                  get_logger(), "Cost has risen more than 1p, using new path instead");
+            }
+            else if (percentage < -1)
+            {
+              RCLCPP_INFO(
+                  get_logger(), "Cost has fallen more than 1p, using new path instead");
+            }
+            
+            if (percentage > 100 && obstruction_count_ <= 5)  //&& obstruction count < 5?
+            {
+              RCLCPP_INFO(
+                  get_logger(), "Cost increase high, failing in order to wait.");
+              obstruction_count_ = obstruction_count_ + 1;
+              action_server_pose_->terminate_current();
+              return;
+            }
+            else
+            {
+              result->path = new_path_;
+              current_path_ = result->path;
+              double total_cost = 0;
+              current_path_costs_.clear();
+              for (long unsigned int i = 0; i < result->path.poses.size(); i++)
+              {
+                geometry_msgs::msg::PoseStamped ps = result->path.poses[i];
+                unsigned int mx;
+                unsigned int my;
+                costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
+                double cost = costmap_->getCost(mx, my);
+                //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
+                total_cost = total_cost + cost;
+                current_path_costs_.push_back(cost);
+              }
+              RCLCPP_INFO(
+                  get_logger(), "Total cost: %.2f", total_cost);
+              obstruction_count_ = 0;
+            }
         }
       }
-
+      //todo - if cost is significantly lower, take new path.
       //todo - costmap locks
       //todo - also check if new path is empty to the same goal, meaning that the path became invalid. thus invalidate current_path
+      //i.e. if path is empty then always set result.path to be empty
 
       RCLCPP_INFO(
           get_logger(), "Planned poses: %ld", result->path.poses.size());
@@ -653,6 +674,7 @@ namespace nav2_planner
       {
         return;
       }
+      
 
       // Publish the plan for visualization purposes
       publishPlan(result->path);
