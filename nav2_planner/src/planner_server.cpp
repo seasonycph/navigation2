@@ -632,7 +632,7 @@ namespace nav2_planner
                   get_logger(), "Cost has fallen more than 1p, using new path instead");
             }
             
-            if (percentage > 100 && obstruction_count_ <= 5)  //&& obstruction count < 5?
+            if (percentage > 50 && obstruction_count_ <= 5)  //&& obstruction count < 5?
             {
               RCLCPP_INFO(
                   get_logger(), "Cost increase high, failing in order to wait.");
