@@ -586,17 +586,27 @@ namespace nav2_planner
         //     get_logger(), "Total cost points: %ld", unculled_costs.size());
         //calculate cost of same path but with current cost values (new costmap, old plan for remaining distance)
         double total_cost_new = 0;
-        for (const auto &ps : current_path_.poses)
+        double highest_cost = 0;
+        double tiles_affected = 0;
+        for (long unsigned int i = 0; i < current_path_.poses.size(); i++)
         {
+          geometry_msgs::msg::PoseStamped ps = current_path_.poses[i];
           unsigned int mx;
           unsigned int my;
           costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
           double cost = costmap_->getCost(mx, my);
           //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
           total_cost_new = total_cost_new + cost;
+          if (cost > highest_cost) {highest_cost = cost;}
+          double diff = cost - unculled_costs[i];
+          if(diff > 20){
+              tiles_affected++;
+          }
         }
         RCLCPP_INFO(
             get_logger(), "Total cost of current leftover path on current cycle costs: %.2f", total_cost_new);
+        RCLCPP_INFO(
+            get_logger(), "Highest cost tile: %.2f", highest_cost);
         // RCLCPP_INFO(
         //     get_logger(), "Total pose points: %ld", current_path_.poses.size());
 
@@ -618,6 +628,7 @@ namespace nav2_planner
             get_logger(), "Unit increase: %.2f", difference);
         //note - even if the path is the same and the underlying environment hasn't changed, costs can vary due to sensor noise -
         // as the inflation layer might oscillate a pixel or two. so when driving along the edge of two inflation layers, costs can increase/decrease.
+        //tiles affected should fix this?
         //if current cost values are higher than previous then wait / use_new path / fail
         //if using new path then clear current_path and current_costs
         if (percentage > 1 || percentage < -1) {
@@ -632,7 +643,7 @@ namespace nav2_planner
                   get_logger(), "Cost has fallen more than 1p, using new path instead");
             }
             
-            if (percentage > 50 && obstruction_count_ <= 5)  //&& obstruction count < 5?
+            if (percentage > 50 && difference > 100 && tiles_affected > 4 && obstruction_count_ <= 5) 
             {
               RCLCPP_INFO(
                   get_logger(), "Cost increase high, failing in order to wait.");
@@ -663,10 +674,7 @@ namespace nav2_planner
             }
         }
       }
-      //todo - if cost is significantly lower, take new path.
       //todo - costmap locks
-      //todo - also check if new path is empty to the same goal, meaning that the path became invalid. thus invalidate current_path
-      //i.e. if path is empty then always set result.path to be empty
 
       RCLCPP_INFO(
           get_logger(), "Planned poses: %ld", result->path.poses.size());
