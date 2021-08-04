@@ -636,9 +636,9 @@ namespace nav2_planner
             {
               RCLCPP_INFO(
                   get_logger(), "Cost increase high, failing in order to wait.");
-              //obstruction_count_ = obstruction_count_ + 1;
-              //action_server_pose_->terminate_current();
-              //return;
+              obstruction_count_ = obstruction_count_ + 1;
+              action_server_pose_->terminate_current();
+              return;
             }
             else
             {
