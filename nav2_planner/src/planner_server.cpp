@@ -446,6 +446,8 @@ namespace nav2_planner
   PlannerServer::computePlan()
   {
     auto start_time = steady_clock_.now();
+    RCLCPP_INFO(
+            get_logger(), "----------------------------------------");
     RCLCPP_INFO(get_logger(), "Compute plan called.");
     // Initialize the ComputePathToPose goal and result
     auto goal = action_server_pose_->get_current_goal();
@@ -599,7 +601,11 @@ namespace nav2_planner
           total_cost_new = total_cost_new + cost;
           if (cost > highest_cost) {highest_cost = cost;}
           double diff = cost - unculled_costs[i];
-          if(diff > 20){
+          if (diff != 0){
+            RCLCPP_INFO(
+            get_logger(), "Cost changed for pose: %ld by %.2f units to %.2f.", i, diff, cost);
+          }
+          if(diff > 200){
               tiles_affected++;
           }
         }
@@ -642,8 +648,8 @@ namespace nav2_planner
               RCLCPP_INFO(
                   get_logger(), "Cost has fallen more than 1p, using new path instead");
             }
-            
-            if (percentage > 50 && difference > 100 && tiles_affected > 4 && obstruction_count_ <= 5) 
+            //if cost rises there should be at least 1 or 2 200+ cost tiles for the block to occur, otherwise just replan?
+            if (percentage > 50 && difference > 200 && tiles_affected > 1 && obstruction_count_ <= 5) 
             {
               RCLCPP_INFO(
                   get_logger(), "Cost increase high, failing in order to wait.");
@@ -721,6 +727,7 @@ namespace nav2_planner
                       "(%.2f, %.2f).",
         start.pose.position.x, start.pose.position.y,
         goal.pose.position.x, goal.pose.position.y);
+    
     RCLCPP_INFO(
         get_logger(), "Attempting to a find path from (%.2f, %.2f) to "
                       "(%.2f, %.2f).",
