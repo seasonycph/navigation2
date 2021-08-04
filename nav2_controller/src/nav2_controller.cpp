@@ -455,6 +455,8 @@ void ControllerServer::computeAndPublishVelocity()
       goal_checkers_[current_goal_checker_].get());
     last_valid_cmd_time_ = now();
   } catch (nav2_core::PlannerException & e) {
+    RCLCPP_INFO(
+    get_logger(), "in here");
     if (failure_tolerance_ > 0 || failure_tolerance_ == -1.0) {
       RCLCPP_WARN(this->get_logger(), e.what());
       cmd_vel_2d.twist.angular.x = 0;
@@ -465,6 +467,8 @@ void ControllerServer::computeAndPublishVelocity()
       cmd_vel_2d.twist.linear.z = 0;
       cmd_vel_2d.header.frame_id = costmap_ros_->getBaseFrameID();
       cmd_vel_2d.header.stamp = now();
+      RCLCPP_INFO(
+      get_logger(), "in here too!");
       if ((now() - last_valid_cmd_time_).seconds() > failure_tolerance_ &&
         failure_tolerance_ != -1.0)
       {
