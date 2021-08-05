@@ -649,6 +649,7 @@ namespace nav2_planner
                   get_logger(), "Cost has fallen more than 1p, using new path instead");
             }
             //if cost rises there should be at least 1 or 2 200+ cost tiles for the block to occur, otherwise just replan?
+            //should the halting also be triggered mid/high tier tile cost. 150 - 200 mid / high. 250 top tier.
             if (percentage > 50 && difference > 200 && tiles_affected > 1 && obstruction_count_ <= 5) 
             {
               RCLCPP_INFO(
