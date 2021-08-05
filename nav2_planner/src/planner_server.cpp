@@ -657,7 +657,7 @@ namespace nav2_planner
               action_server_pose_->terminate_current();
               return;
             }
-            else
+            else //if (obstructio_count > 5) if we want to not replan at all even on slight variations. 
             {
               result->path = new_path_;
               current_path_ = result->path;
