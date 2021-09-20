@@ -4,6 +4,11 @@
       <description>Lets robot sleep for a specified amount of time at waypoint arrival</description>
     </class>
   </library>
+  <library path="orient_at_waypoint">
+    <class type="nav2_waypoint_follower::OrientAtWaypoint" base_class_type="nav2_core::WaypointTaskExecutor">
+      <description>Orients the robot on aisle waypoints according to end destination orientation.</description>
+    </class>
+  </library>
   <library path="photo_at_waypoint">
     <class type="nav2_waypoint_follower::PhotoAtWaypoint" base_class_type="nav2_core::WaypointTaskExecutor">
       <description>Run-time plugin that takes photos at waypoint arrivals when using waypoint follower node. 
