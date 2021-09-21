@@ -1,0 +1,11 @@
+#goal
+geometry_msgs/Quaternion goal_pose
+---
+#result
+bool success
+string message
+---
+#feedback
+float32 current_yaw
+float32 goal_yaw
+float32 distance

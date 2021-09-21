@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NAV2_WAYPOINT_FOLLOWER__PLUGINS__WAIT_AT_WAYPOINT_HPP_
-#define NAV2_WAYPOINT_FOLLOWER__PLUGINS__WAIT_AT_WAYPOINT_HPP_
+#ifndef NAV2_WAYPOINT_FOLLOWER__PLUGINS__ORIENT_AT_WAYPOINT_HPP_
+#define NAV2_WAYPOINT_FOLLOWER__PLUGINS__ORIENT_AT_WAYPOINT_HPP_
 #pragma once
 
 #include <string>
@@ -21,43 +21,53 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "nav2_core/waypoint_task_executor.hpp"
+#include "nav2_msgs/action/orientation.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
 
 namespace nav2_waypoint_follower
 {
+    enum class ActionStatus
+    {
+        UNKNOWN = 0,
+        PROCESSING = 1,
+        FAILED = 2,
+        SUCCEEDED = 3
+    };
 
-/**
+    /**
  * @brief Simple plugin based on WaypointTaskExecutor, lets robot to sleep for a
  *        specified amount of time at waypoint arrival. You can reference this class to define
  *        your own task and rewrite the body for it.
  *
  */
-class OrientAtWaypoint : public nav2_core::WaypointTaskExecutor
-{
-public:
-/**
+    class OrientAtWaypoint : public nav2_core::WaypointTaskExecutor
+    {
+    public:
+        using ClientT = nav2_msgs::action::Orientation;
+        using ActionClient = rclcpp_action::Client<ClientT>;
+        /**
  * @brief Construct a new Wait At Waypoint Arrival object
  *
  */
-  OrientAtWaypoint();
+        OrientAtWaypoint();
 
-  /**
+        /**
    * @brief Destroy the Wait At Waypoint Arrival object
    *
    */
-  ~OrientAtWaypoint();
+        ~OrientAtWaypoint();
 
-  /**
+        /**
    * @brief declares and loads parameters used (waypoint_pause_duration_)
    *
    * @param parent parent node that plugin will be created withing(waypoint_follower in this case)
    * @param plugin_name
    */
-  void initialize(
-    const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
-    const std::string & plugin_name);
+        void initialize(
+            const rclcpp_lifecycle::LifecycleNode::WeakPtr &parent,
+            const std::string &plugin_name);
 
-
-  /**
+        /**
    * @brief Override this to define the body of your task that you would like to execute once the robot arrived to waypoint
    *
    * @param curr_pose current pose of the robot
@@ -65,15 +75,27 @@ public:
    * @return true if task execution was successful
    * @return false if task execution failed
    */
-  bool processAtWaypoint(
-    const geometry_msgs::msg::PoseStamped & curr_pose, const int & curr_waypoint_index);
+        bool processAtWaypoint(
+            const geometry_msgs::msg::PoseStamped &curr_pose, const int &curr_waypoint_index);
+        void result_callback(const rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::WrappedResult &result);
 
-protected:
-  // the robot will sleep waypoint_pause_duration_ milliseconds
-  int waypoint_pause_duration_;
-  bool is_enabled_;
-  rclcpp::Logger logger_{rclcpp::get_logger("nav2_waypoint_follower")};
-};
+        void goal_response_callback(const rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::SharedPtr &goal);
 
-}  // namespace nav2_waypoint_follower
-#endif  // NAV2_WAYPOINT_FOLLOWER__PLUGINS__WAIT_AT_WAYPOINT_HPP_
+    protected:
+        
+        // the robot will sleep waypoint_pause_duration_ milliseconds
+        int waypoint_pause_duration_;
+        bool is_enabled_;
+        //rclcpp::Logger logger_{rclcpp::get_logger("nav2_waypoint_follower")};
+
+        rclcpp::CallbackGroup::SharedPtr callback_group_;
+        rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
+        ActionClient::SharedPtr orientation_client_;
+        std::shared_future<rclcpp_action::ClientGoalHandle<ClientT>::SharedPtr> future_goal_handle_;
+        ActionStatus current_goal_status_;
+        // global logger
+        rclcpp::Logger logger_{rclcpp::get_logger("nav2_waypoint_follower")};
+    };
+
+} // namespace nav2_waypoint_follower
+#endif // NAV2_WAYPOINT_FOLLOWER__PLUGINS__WAIT_AT_WAYPOINT_HPP_
