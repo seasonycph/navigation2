@@ -1,6 +1,7 @@
 #include <pluginlib/class_list_macros.hpp>
 #include <string>
 #include <exception>
+#include <functional>
 
 #include "nav2_util/node_utils.hpp"
 #include "nav2_waypoint_follower/plugins/orient_at_waypoint.hpp"
@@ -57,9 +58,9 @@ namespace nav2_waypoint_follower
             rclcpp::CallbackGroupType::MutuallyExclusive,
             false);
         callback_group_executor_.add_callback_group(callback_group_, node->get_node_base_interface());
-        orientation_client_ = rclcpp_action::create_client<ClientT>(
+        orientation_client_ = rclcpp_action::create_client<nav2_msgs::action::Orientation>(
             node,
-            "lewis/orientation_managers",
+            "lewis/orientation_manager",
             callback_group_);
     }
 
@@ -70,22 +71,45 @@ namespace nav2_waypoint_follower
         {
             return true;
         }
-        RCLCPP_INFO(
-            logger_, "Arrived at %i'th waypoint, sleeping for %i milliseconds",
-            curr_waypoint_index,
-            waypoint_pause_duration_);
-        rclcpp::sleep_for(std::chrono::milliseconds(waypoint_pause_duration_));
+        using namespace std::placeholders;
+        //auto node = parent.lock();
+        result_received_ = false;
+        //send goal
+        auto goal_msg = nav2_msgs::action::Orientation::Goal();
+        goal_msg.goal_pose.z = 0.999990380295387;
+        goal_msg.goal_pose.w = 0.00438626454830838;
+        auto send_goal_options = rclcpp_action::Client<nav2_msgs::action::Orientation>::SendGoalOptions();
+        send_goal_options.goal_response_callback =
+            std::bind(&OrientAtWaypoint::goal_response_callback, this, _1);
+        send_goal_options.feedback_callback =
+            std::bind(&OrientAtWaypoint::feedback_callback, this, _1, _2);
+        send_goal_options.result_callback =
+            std::bind(&OrientAtWaypoint::result_callback, this, _1);
+        // todo, check for goal response feedback
+        auto future_goal = orientation_client_->async_send_goal(goal_msg, send_goal_options);
+
+        while (!result_received_)
+        {
+            
+            rclcpp::sleep_for(std::chrono::milliseconds(waypoint_pause_duration_));
+            RCLCPP_INFO(
+                logger_, "Task incomplete at %i'th waypoint, sleeping for %i milliseconds",
+                curr_waypoint_index,
+                waypoint_pause_duration_);
+        }
+
         return true;
         //extra params -> last node
         //action server, call rotation (orientation) manager with (current position, end position)
     }
 
-    void OrientAtWaypoint::goal_response_callback(const rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::SharedPtr & future)
+    void OrientAtWaypoint::goal_response_callback(const rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::SharedPtr &future)
     {
+        RCLCPP_INFO(logger_, "ChaCHING");
         auto goal_handle = future.get();
         if (!goal_handle)
         {
-            RCLCPP_ERROR(logger_, "Goal was rejected by server");
+            RCLCPP_INFO(logger_, "Goal was rejected by server");
         }
         else
         {
@@ -93,21 +117,18 @@ namespace nav2_waypoint_follower
         }
     }
 
-    // void feedback_callback(
-    //     ClientGoalHandle::SharedPtr,
-    //     const std::shared_ptr<const Orientation::Feedback> feedback)
-    // {
-    //     std::stringstream ss;
-    //     ss << "Next number in sequence received: ";
-    //     for (auto number : feedback->partial_sequence)
-    //     {
-    //         ss << number << " ";
-    //     }
-    //     RCLCPP_INFO(node->get_logger(), ss.str().c_str());
-    // }
-
-    void OrientAtWaypoint::result_callback(const rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::WrappedResult & result)
+    void OrientAtWaypoint::feedback_callback(
+        rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::SharedPtr,
+        const std::shared_ptr<const nav2_msgs::action::Orientation::Feedback> feedback)
     {
+        std::stringstream ss;
+        ss << "Next number in sequence received: " << feedback->distance;
+        RCLCPP_INFO(logger_, ss.str().c_str());
+    }
+
+    void OrientAtWaypoint::result_callback(const rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::WrappedResult &result)
+    {
+        result_received_ = true;
         switch (result.code)
         {
         case rclcpp_action::ResultCode::SUCCEEDED:

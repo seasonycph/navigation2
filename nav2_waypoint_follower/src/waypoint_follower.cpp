@@ -163,7 +163,7 @@ WaypointFollower::followWaypoints()
   rclcpp::WallRate r(loop_rate_);
   uint32_t goal_index = 0;
   bool new_goal = true;
-
+  auto node = shared_from_this();
   while (rclcpp::ok()) {
     // Check if asked to stop processing action
     if (action_server_->is_cancel_requested()) {
@@ -223,6 +223,7 @@ WaypointFollower::followWaypoints()
       RCLCPP_INFO(
         get_logger(), "Succeeded processing waypoint %i, processing waypoint task execution",
         goal_index);
+        //todo - if orient plugin pass in node else dont
       bool is_task_executed = waypoint_task_executor_->processAtWaypoint(
         goal->poses[goal_index], goal_index);
       RCLCPP_INFO(

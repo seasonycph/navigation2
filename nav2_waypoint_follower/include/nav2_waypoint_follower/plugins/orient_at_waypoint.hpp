@@ -17,7 +17,6 @@
 #pragma once
 
 #include <string>
-
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "nav2_core/waypoint_task_executor.hpp"
@@ -45,6 +44,8 @@ namespace nav2_waypoint_follower
     public:
         using ClientT = nav2_msgs::action::Orientation;
         using ActionClient = rclcpp_action::Client<ClientT>;
+        
+        
         /**
  * @brief Construct a new Wait At Waypoint Arrival object
  *
@@ -77,21 +78,25 @@ namespace nav2_waypoint_follower
    */
         bool processAtWaypoint(
             const geometry_msgs::msg::PoseStamped &curr_pose, const int &curr_waypoint_index);
+        
+        
+        
         void result_callback(const rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::WrappedResult &result);
 
         void goal_response_callback(const rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::SharedPtr &goal);
+        void feedback_callback(
+            rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::SharedPtr,
+            const std::shared_ptr<const nav2_msgs::action::Orientation::Feedback> feedback);
 
-    protected:
-        
         // the robot will sleep waypoint_pause_duration_ milliseconds
         int waypoint_pause_duration_;
         bool is_enabled_;
         //rclcpp::Logger logger_{rclcpp::get_logger("nav2_waypoint_follower")};
-
+        bool result_received_;
         rclcpp::CallbackGroup::SharedPtr callback_group_;
-        rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
+        rclcpp::executors::MultiThreadedExecutor callback_group_executor_;
         ActionClient::SharedPtr orientation_client_;
-        std::shared_future<rclcpp_action::ClientGoalHandle<ClientT>::SharedPtr> future_goal_handle_;
+        std::shared_future<rclcpp_action::ClientGoalHandle<nav2_msgs::action::Orientation>::SharedPtr> future_goal_handle_;
         ActionStatus current_goal_status_;
         // global logger
         rclcpp::Logger logger_{rclcpp::get_logger("nav2_waypoint_follower")};

@@ -64,6 +64,8 @@ public:
    */
   virtual bool processAtWaypoint(
     const geometry_msgs::msg::PoseStamped & curr_pose, const int & curr_waypoint_index) = 0;
+  // virtual bool processAtWaypointExtended(
+  //   const geometry_msgs::msg::PoseStamped & curr_pose, const int & curr_waypoint_index, const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent) = 0;
 };
 }  // namespace nav2_core
 #endif  // NAV2_CORE__WAYPOINT_TASK_EXECUTOR_HPP_
