@@ -59,9 +59,11 @@ namespace nav2_waypoint_follower
             false);
         callback_group_executor_.add_callback_group(callback_group_, node->get_node_base_interface());
         orientation_client_ = rclcpp_action::create_client<nav2_msgs::action::Orientation>(
-            node,
-            "lewis/orientation_manager",
-            callback_group_);
+            node->get_node_base_interface(),
+            node->get_node_graph_interface(),
+            node->get_node_logging_interface(),
+            node->get_node_waitables_interface(),
+            "lewis/orientation_manager", callback_group_);
     }
 
     bool OrientAtWaypoint::processAtWaypoint(
@@ -90,7 +92,7 @@ namespace nav2_waypoint_follower
 
         while (!result_received_)
         {
-            
+            callback_group_executor_.spin_some();
             rclcpp::sleep_for(std::chrono::milliseconds(waypoint_pause_duration_));
             RCLCPP_INFO(
                 logger_, "Task incomplete at %i'th waypoint, sleeping for %i milliseconds",

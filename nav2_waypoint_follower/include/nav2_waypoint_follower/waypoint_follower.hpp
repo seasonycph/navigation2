@@ -22,9 +22,11 @@
 #include "nav2_util/lifecycle_node.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
+#include "nav2_msgs/action/orientation.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nav2_util/simple_action_server.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
+#include "std_msgs/msg/string.hpp"
 
 #include "nav2_util/node_utils.hpp"
 #include "nav2_core/waypoint_task_executor.hpp"
@@ -52,8 +54,11 @@ class WaypointFollower : public nav2_util::LifecycleNode
 public:
   using ActionT = nav2_msgs::action::FollowWaypoints;
   using ClientT = nav2_msgs::action::NavigateToPose;
+  using ClientOr = nav2_msgs::action::Orientation;
   using ActionServer = nav2_util::SimpleActionServer<ActionT>;
   using ActionClient = rclcpp_action::Client<ClientT>;
+  using ActionClientOr = rclcpp_action::Client<ClientOr>;
+
 
   /**
    * @brief A constructor for nav2_waypoint_follower::WaypointFollower class
@@ -108,21 +113,30 @@ protected:
    * @param result Result of action server updated asynchronously
    */
   void resultCallback(const rclcpp_action::ClientGoalHandle<ClientT>::WrappedResult & result);
+  
+  void resultCallbackOr(const rclcpp_action::ClientGoalHandle<ClientOr>::WrappedResult & result);
 
   /**
    * @brief Action client goal response callback
    * @param goal Response of action server updated asynchronously
    */
   void goalResponseCallback(const rclcpp_action::ClientGoalHandle<ClientT>::SharedPtr & goal);
+  void goalResponseCallbackOr(const rclcpp_action::ClientGoalHandle<ClientOr>::SharedPtr & goal);
 
   // Our action server
   std::unique_ptr<ActionServer> action_server_;
   ActionClient::SharedPtr nav_to_pose_client_;
+  ActionClientOr::SharedPtr orientation_client_;
   rclcpp::CallbackGroup::SharedPtr callback_group_;
+  rclcpp::CallbackGroup::SharedPtr callback_group_or_;
   rclcpp::executors::SingleThreadedExecutor callback_group_executor_;
+  rclcpp::executors::SingleThreadedExecutor callback_group_executor_or_;
   std::shared_future<rclcpp_action::ClientGoalHandle<ClientT>::SharedPtr> future_goal_handle_;
+  std::shared_future<rclcpp_action::ClientGoalHandle<ClientOr>::SharedPtr> future_goal_handle_or_;
   bool stop_on_failure_;
   ActionStatus current_goal_status_;
+  ActionStatus current_goal_status_or_;
+
   int loop_rate_;
   std::vector<int> failed_ids_;
 
@@ -133,6 +147,8 @@ protected:
   waypoint_task_executor_;
   std::string waypoint_task_executor_id_;
   std::string waypoint_task_executor_type_;
+  rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>::SharedPtr publisher_;
+
 };
 
 }  // namespace nav2_waypoint_follower
