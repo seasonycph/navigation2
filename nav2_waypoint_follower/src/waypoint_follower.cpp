@@ -78,7 +78,7 @@ namespace nav2_waypoint_follower
         get_node_graph_interface(),
         get_node_logging_interface(),
         get_node_waitables_interface(),
-        "lewis/orientation_manager", callback_group_);
+        "orientation_manager", callback_group_);
 
     action_server_ = std::make_unique<ActionServer>(
         get_node_base_interface(),
@@ -263,7 +263,6 @@ namespace nav2_waypoint_follower
         //     std::bind(&WaypointFollower::goalResponseCallbackOr, this, std::placeholders::_1);
         // send_goal_options_or.result_callback =
         //     std::bind(&WaypointFollower::resultCallbackOr, this, std::placeholders::_1);
-        // callback_group_executor_or_.spin_some();
         // future_goal_handle_or_ =
         //     orientation_client_->async_send_goal(goal_msg, send_goal_options_or);
         // current_goal_status_or_ = ActionStatus::PROCESSING;
@@ -278,8 +277,6 @@ namespace nav2_waypoint_follower
         //   message.data = "Hello, world! ";
         //   publisher_->publish(message);
         //   RCLCPP_INFO(get_logger(), "Processing orientation manager");
-          
-        //   callback_group_executor_or_.spin_some();
         //   rclcpp::sleep_for(std::chrono::milliseconds(1000));
         // }
 
