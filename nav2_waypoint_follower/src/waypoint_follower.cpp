@@ -192,6 +192,10 @@ namespace nav2_waypoint_follower
         // for result callback processing
         callback_group_executor_.spin_some();
         action_server_->terminate_all();
+
+        // auto cancel_future_orient = orientation_client_->async_cancel_all_goals();
+        // callback_group_executor_.spin_until_future_complete(cancel_future_orient);
+        // callback_group_executor_.spin_some();
         return;
       }
 
