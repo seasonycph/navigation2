@@ -437,211 +437,211 @@ PlannerServer::computePlan()
 
     result->path = getPlan(start, goal_pose, goal->planner_id);
 
-    //todo - wrap in flag whether to use or not
-    //use old path if the goal does not change
-    nav_msgs::msg::Path new_path_ = result->path;
-    int current_path_size = current_path_.poses.size();
-    int new_path_size = result->path.poses.size();
-    bool cull_points = false;
-    if (current_path_size == 0)
-    {
-      RCLCPP_INFO(get_logger(), "Current path was empty, filling.");
-      current_path_ = result->path;
-      //set new cost array
-      //todo - put this in a method
-      double total_cost = 0;
-      current_path_costs_.clear();
-      for (long unsigned int i = 0; i < result->path.poses.size(); i++)
-      {
-        geometry_msgs::msg::PoseStamped ps = result->path.poses[i];
-        unsigned int mx;
-        unsigned int my;
-        costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
-        double cost = costmap_->getCost(mx, my);
-        //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
-        total_cost = total_cost + cost;
-        current_path_costs_.push_back(cost);
-      }
-      RCLCPP_INFO(
-          get_logger(), "Total cost: %.2f", total_cost);
-    }
-    else if (current_path_size != 0 && new_path_size != 0)
-    {
-      RCLCPP_INFO(get_logger(), "Current path is populated, checking if new path is same goal.");
-      geometry_msgs::msg::PoseStamped current_path_end = current_path_.poses[current_path_size - 1];
-      geometry_msgs::msg::PoseStamped new_path_end = result->path.poses[new_path_size - 1];
-      if ((current_path_end.pose.position.x == new_path_end.pose.position.x) && (current_path_end.pose.position.y == new_path_end.pose.position.y))
-      {
-        RCLCPP_INFO(get_logger(), "Path end goal does not differ, not replacing current path.");
-        //TODO check similarity of current path and result path, they might have same goals but could differ vastly, in which case take the new path.
-        cull_points = true;
-      }
-      else
-      {
-        current_path_ = result->path;
-        RCLCPP_INFO(get_logger(), "Path end goal differs, replacing current path with new path.");
-        //store total cost of path per pose point in array
-        //reset array basically
-        //todo - put in method
-        double total_cost = 0;
-        current_path_costs_.clear();
-        for (long unsigned int i = 0; i < result->path.poses.size(); i++)
-        {
-          geometry_msgs::msg::PoseStamped ps = result->path.poses[i];
-          unsigned int mx;
-          unsigned int my;
-          costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
-          double cost = costmap_->getCost(mx, my);
-          //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
-          total_cost = total_cost + cost;
-          current_path_costs_.push_back(cost);
-        }
-        RCLCPP_INFO(
-            get_logger(), "Total cost: %.2f", total_cost);
-      }
-    }
+    // //todo - wrap in flag whether to use or not
+    // //use old path if the goal does not change
+    // nav_msgs::msg::Path new_path_ = result->path;
+    // int current_path_size = current_path_.poses.size();
+    // int new_path_size = result->path.poses.size();
+    // bool cull_points = false;
+    // if (current_path_size == 0)
+    // {
+    //   RCLCPP_INFO(get_logger(), "Current path was empty, filling.");
+    //   current_path_ = result->path;
+    //   //set new cost array
+    //   //todo - put this in a method
+    //   double total_cost = 0;
+    //   current_path_costs_.clear();
+    //   for (long unsigned int i = 0; i < result->path.poses.size(); i++)
+    //   {
+    //     geometry_msgs::msg::PoseStamped ps = result->path.poses[i];
+    //     unsigned int mx;
+    //     unsigned int my;
+    //     costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
+    //     double cost = costmap_->getCost(mx, my);
+    //     //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
+    //     total_cost = total_cost + cost;
+    //     current_path_costs_.push_back(cost);
+    //   }
+    //   RCLCPP_INFO(
+    //       get_logger(), "Total cost: %.2f", total_cost);
+    // }
+    // else if (current_path_size != 0 && new_path_size != 0)
+    // {
+    //   RCLCPP_INFO(get_logger(), "Current path is populated, checking if new path is same goal.");
+    //   geometry_msgs::msg::PoseStamped current_path_end = current_path_.poses[current_path_size - 1];
+    //   geometry_msgs::msg::PoseStamped new_path_end = result->path.poses[new_path_size - 1];
+    //   if ((current_path_end.pose.position.x == new_path_end.pose.position.x) && (current_path_end.pose.position.y == new_path_end.pose.position.y))
+    //   {
+    //     RCLCPP_INFO(get_logger(), "Path end goal does not differ, not replacing current path.");
+    //     //TODO check similarity of current path and result path, they might have same goals but could differ vastly, in which case take the new path.
+    //     cull_points = true;
+    //   }
+    //   else
+    //   {
+    //     current_path_ = result->path;
+    //     RCLCPP_INFO(get_logger(), "Path end goal differs, replacing current path with new path.");
+    //     //store total cost of path per pose point in array
+    //     //reset array basically
+    //     //todo - put in method
+    //     double total_cost = 0;
+    //     current_path_costs_.clear();
+    //     for (long unsigned int i = 0; i < result->path.poses.size(); i++)
+    //     {
+    //       geometry_msgs::msg::PoseStamped ps = result->path.poses[i];
+    //       unsigned int mx;
+    //       unsigned int my;
+    //       costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
+    //       double cost = costmap_->getCost(mx, my);
+    //       //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
+    //       total_cost = total_cost + cost;
+    //       current_path_costs_.push_back(cost);
+    //     }
+    //     RCLCPP_INFO(
+    //         get_logger(), "Total cost: %.2f", total_cost);
+    //   }
+    // }
 
-    //cull previous points - this implementation could be an issue if the path ahead loops close to current position, thn we cull too many points..
-    //todo - this can be put into a method and called from where the cullpoints flag is set
-    if (cull_points)
-    {
-      geometry_msgs::msg::PoseStamped new_path_start = result->path.poses[0];
-      //calc distance to all points in current_path, find index where distance is shortest, cull points before that.
-      int closest_index = -1;
-      double distance = std::numeric_limits<double>::max();
-      double static_point_x = new_path_start.pose.position.x;
-      double static_point_y = new_path_start.pose.position.y;
-      for (int i = 0; i < current_path_size; i++)
-      {
-        //distance from current position point to current_path[i] point
-        double moving_point_x = current_path_.poses[i].pose.position.x;
-        double moving_point_y = current_path_.poses[i].pose.position.y;
-        double cur_dist = sqrt(pow(static_point_x - moving_point_x, 2) + pow(static_point_y - moving_point_y, 2));
-        if (cur_dist < distance)
-        {
-          distance = cur_dist;
-          closest_index = i;
-        }
-      }
-      RCLCPP_INFO(
-          get_logger(), "Closest pose index along path from current position: %d. Previous points will be culled", closest_index);
-      std::vector<geometry_msgs::msg::PoseStamped> unculled_poses;
-      unculled_poses = std::vector<geometry_msgs::msg::PoseStamped>(current_path_.poses.begin() + closest_index, current_path_.poses.end());
-      current_path_.poses = unculled_poses;
-      result->path = current_path_;
+    // //cull previous points - this implementation could be an issue if the path ahead loops close to current position, thn we cull too many points..
+    // //todo - this can be put into a method and called from where the cullpoints flag is set
+    // if (cull_points)
+    // {
+    //   geometry_msgs::msg::PoseStamped new_path_start = result->path.poses[0];
+    //   //calc distance to all points in current_path, find index where distance is shortest, cull points before that.
+    //   int closest_index = -1;
+    //   double distance = std::numeric_limits<double>::max();
+    //   double static_point_x = new_path_start.pose.position.x;
+    //   double static_point_y = new_path_start.pose.position.y;
+    //   for (int i = 0; i < current_path_size; i++)
+    //   {
+    //     //distance from current position point to current_path[i] point
+    //     double moving_point_x = current_path_.poses[i].pose.position.x;
+    //     double moving_point_y = current_path_.poses[i].pose.position.y;
+    //     double cur_dist = sqrt(pow(static_point_x - moving_point_x, 2) + pow(static_point_y - moving_point_y, 2));
+    //     if (cur_dist < distance)
+    //     {
+    //       distance = cur_dist;
+    //       closest_index = i;
+    //     }
+    //   }
+    //   RCLCPP_INFO(
+    //       get_logger(), "Closest pose index along path from current position: %d. Previous points will be culled", closest_index);
+    //   std::vector<geometry_msgs::msg::PoseStamped> unculled_poses;
+    //   unculled_poses = std::vector<geometry_msgs::msg::PoseStamped>(current_path_.poses.begin() + closest_index, current_path_.poses.end());
+    //   current_path_.poses = unculled_poses;
+    //   result->path = current_path_;
 
-      std::vector<double> unculled_costs;
-      unculled_costs = std::vector<double>(current_path_costs_.begin() + closest_index, current_path_costs_.end());
-      current_path_costs_ = unculled_costs;
-      //store array of cost values for each pose, cull values already past, calculate cost.
-      //(old costmap, old plan for remaining distance)
-      double total_cost_old = 0;
-      for (const auto &value : unculled_costs)
-      {
-        total_cost_old = total_cost_old + value;
-      }
-      RCLCPP_INFO(
-          get_logger(), "Total cost of current leftover path on previous cycle costs: %.2f", total_cost_old);
-      // RCLCPP_INFO(
-      //     get_logger(), "Total cost points: %ld", unculled_costs.size());
-      //calculate cost of same path but with current cost values (new costmap, old plan for remaining distance)
-      double total_cost_new = 0;
-      double highest_cost = 0;
-      double tiles_affected = 0;
-      for (long unsigned int i = 0; i < current_path_.poses.size(); i++)
-      {
-        geometry_msgs::msg::PoseStamped ps = current_path_.poses[i];
-        unsigned int mx;
-        unsigned int my;
-        costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
-        double cost = costmap_->getCost(mx, my);
-        //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
-        total_cost_new = total_cost_new + cost;
-        if (cost > highest_cost) {highest_cost = cost;}
-        double diff = cost - unculled_costs[i];
-        if (diff != 0){
-          RCLCPP_INFO(
-          get_logger(), "Cost changed for pose: %ld by %.2f units to %.2f.", i, diff, cost);
-        }
-        if(diff > 200){
-            tiles_affected++;
-        }
-      }
-      RCLCPP_INFO(
-          get_logger(), "Total cost of current leftover path on current cycle costs: %.2f", total_cost_new);
-      RCLCPP_INFO(
-          get_logger(), "Highest cost tile: %.2f", highest_cost);
-      // RCLCPP_INFO(
-      //     get_logger(), "Total pose points: %ld", current_path_.poses.size());
+    //   std::vector<double> unculled_costs;
+    //   unculled_costs = std::vector<double>(current_path_costs_.begin() + closest_index, current_path_costs_.end());
+    //   current_path_costs_ = unculled_costs;
+    //   //store array of cost values for each pose, cull values already past, calculate cost.
+    //   //(old costmap, old plan for remaining distance)
+    //   double total_cost_old = 0;
+    //   for (const auto &value : unculled_costs)
+    //   {
+    //     total_cost_old = total_cost_old + value;
+    //   }
+    //   RCLCPP_INFO(
+    //       get_logger(), "Total cost of current leftover path on previous cycle costs: %.2f", total_cost_old);
+    //   // RCLCPP_INFO(
+    //   //     get_logger(), "Total cost points: %ld", unculled_costs.size());
+    //   //calculate cost of same path but with current cost values (new costmap, old plan for remaining distance)
+    //   double total_cost_new = 0;
+    //   double highest_cost = 0;
+    //   double tiles_affected = 0;
+    //   for (long unsigned int i = 0; i < current_path_.poses.size(); i++)
+    //   {
+    //     geometry_msgs::msg::PoseStamped ps = current_path_.poses[i];
+    //     unsigned int mx;
+    //     unsigned int my;
+    //     costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
+    //     double cost = costmap_->getCost(mx, my);
+    //     //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
+    //     total_cost_new = total_cost_new + cost;
+    //     if (cost > highest_cost) {highest_cost = cost;}
+    //     double diff = cost - unculled_costs[i];
+    //     if (diff != 0){
+    //       RCLCPP_INFO(
+    //       get_logger(), "Cost changed for pose: %ld by %.2f units to %.2f.", i, diff, cost);
+    //     }
+    //     if(diff > 200){
+    //         tiles_affected++;
+    //     }
+    //   }
+    //   RCLCPP_INFO(
+    //       get_logger(), "Total cost of current leftover path on current cycle costs: %.2f", total_cost_new);
+    //   RCLCPP_INFO(
+    //       get_logger(), "Highest cost tile: %.2f", highest_cost);
+    //   // RCLCPP_INFO(
+    //   //     get_logger(), "Total pose points: %ld", current_path_.poses.size());
 
-      //percentage difference, set to 1s as to avoid divide by 0
-      if (total_cost_old == 0)
-      {
-        total_cost_old = 1;
-      }
-      if (total_cost_new == 0)
-      {
-        total_cost_new = 1;
-      }
-      double difference = total_cost_new - total_cost_old;
-      double ratio = difference / total_cost_old;
-      double percentage = ratio * 100;
-      RCLCPP_INFO(
-          get_logger(), "Percentage increase: %.2f", percentage);
-      RCLCPP_INFO(
-          get_logger(), "Unit increase: %.2f", difference);
-      //note - even if the path is the same and the underlying environment hasn't changed, costs can vary due to sensor noise -
-      // as the inflation layer might oscillate a pixel or two. so when driving along the edge of two inflation layers, costs can increase/decrease.
-      //tiles affected should fix this?
-      //if current cost values are higher than previous then wait / use_new path / fail
-      //if using new path then clear current_path and current_costs
-      if (percentage > 1 || percentage < -1) {
-        if (percentage > 1)
-          {
-            RCLCPP_INFO(
-                get_logger(), "Cost has risen more than 1p, using new path instead");
-          }
-          else if (percentage < -1)
-          {
-            RCLCPP_INFO(
-                get_logger(), "Cost has fallen more than 1p, using new path instead");
-          }
-          // //if cost rises there should be at least 1 or 2 200+ cost tiles for the block to occur, otherwise just replan?
-          // //should the halting also be triggered mid/high tier tile cost. 150 - 200 mid / high. 250 top tier.
-          // if (percentage > 50 && difference > 200 && tiles_affected > 1 && obstruction_count_ <= 5) 
-          // {
-          //   RCLCPP_INFO(
-          //       get_logger(), "Cost increase high, increasing obstruction count.");
-          //   // RCLCPP_INFO(
-          //   //     get_logger(), "Cost increase high, failing in order to wait.");
-          //   obstruction_count_ = obstruction_count_ + 1;
-          //   // action_server_pose_->terminate_current();
-          //   // return;
-          // }
-          // else //if (obstructio_count > 5) if we want to not replan at all even on slight variations. 
-          // {
-            result->path = new_path_;
-            current_path_ = result->path;
-            double total_cost = 0;
-            current_path_costs_.clear();
-            for (long unsigned int i = 0; i < result->path.poses.size(); i++)
-            {
-              geometry_msgs::msg::PoseStamped ps = result->path.poses[i];
-              unsigned int mx;
-              unsigned int my;
-              costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
-              double cost = costmap_->getCost(mx, my);
-              //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
-              total_cost = total_cost + cost;
-              current_path_costs_.push_back(cost);
-            }
-            RCLCPP_INFO(
-                get_logger(), "Total cost: %.2f", total_cost);
-            obstruction_count_ = 0;
-          // }
-      }
-    }
-    //todo - costmap locks
+    //   //percentage difference, set to 1s as to avoid divide by 0
+    //   if (total_cost_old == 0)
+    //   {
+    //     total_cost_old = 1;
+    //   }
+    //   if (total_cost_new == 0)
+    //   {
+    //     total_cost_new = 1;
+    //   }
+    //   double difference = total_cost_new - total_cost_old;
+    //   double ratio = difference / total_cost_old;
+    //   double percentage = ratio * 100;
+    //   RCLCPP_INFO(
+    //       get_logger(), "Percentage increase: %.2f", percentage);
+    //   RCLCPP_INFO(
+    //       get_logger(), "Unit increase: %.2f", difference);
+    //   //note - even if the path is the same and the underlying environment hasn't changed, costs can vary due to sensor noise -
+    //   // as the inflation layer might oscillate a pixel or two. so when driving along the edge of two inflation layers, costs can increase/decrease.
+    //   //tiles affected should fix this?
+    //   //if current cost values are higher than previous then wait / use_new path / fail
+    //   //if using new path then clear current_path and current_costs
+    //   if (percentage > 0.01 || percentage < -1) {
+    //     if (percentage > 1)
+    //       {
+    //         RCLCPP_INFO(
+    //             get_logger(), "Cost has risen more than 0.01p, using new path instead");
+    //       }
+    //       else if (percentage < -1)
+    //       {
+    //         RCLCPP_INFO(
+    //             get_logger(), "Cost has fallen more than 1p, using new path instead");
+    //       }
+    //       // //if cost rises there should be at least 1 or 2 200+ cost tiles for the block to occur, otherwise just replan?
+    //       // //should the halting also be triggered mid/high tier tile cost. 150 - 200 mid / high. 250 top tier.
+    //       // if (percentage > 50 && difference > 200 && tiles_affected > 1 && obstruction_count_ <= 5) 
+    //       // {
+    //       //   RCLCPP_INFO(
+    //       //       get_logger(), "Cost increase high, increasing obstruction count.");
+    //       //   // RCLCPP_INFO(
+    //       //   //     get_logger(), "Cost increase high, failing in order to wait.");
+    //       //   obstruction_count_ = obstruction_count_ + 1;
+    //       //   // action_server_pose_->terminate_current();
+    //       //   // return;
+    //       // }
+    //       // else //if (obstructio_count > 5) if we want to not replan at all even on slight variations. 
+    //       // {
+    //         result->path = new_path_;
+    //         current_path_ = result->path;
+    //         double total_cost = 0;
+    //         current_path_costs_.clear();
+    //         for (long unsigned int i = 0; i < result->path.poses.size(); i++)
+    //         {
+    //           geometry_msgs::msg::PoseStamped ps = result->path.poses[i];
+    //           unsigned int mx;
+    //           unsigned int my;
+    //           costmap_->worldToMap(ps.pose.position.x, ps.pose.position.y, mx, my);
+    //           double cost = costmap_->getCost(mx, my);
+    //           //RCLCPP_INFO(get_logger(), "Got cost %f for mx: %d and my: %d", cost, mx, my);
+    //           total_cost = total_cost + cost;
+    //           current_path_costs_.push_back(cost);
+    //         }
+    //         RCLCPP_INFO(
+    //             get_logger(), "Total cost: %.2f", total_cost);
+    //         obstruction_count_ = 0;
+    //       // }
+    //   }
+    // }
+    // //todo - costmap locks
 
     if (!validatePath(action_server_pose_, goal_pose, result->path, goal->planner_id)) {
       return;
