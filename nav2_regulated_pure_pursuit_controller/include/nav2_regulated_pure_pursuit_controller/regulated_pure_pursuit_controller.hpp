@@ -225,7 +225,7 @@ protected:
    * @param pose Pose input to determine the cusp position
    * @return robot distance from the cusp
    */
-  double findDirectionChange(const geometry_msgs::msg::PoseStamped & pose);
+  double findDirectionChange(const geometry_msgs::msg::PoseStamped & pose, geometry_msgs::msg::PoseStamped & cusp);
 
   std::shared_ptr<tf2_ros::Buffer> tf_;
   std::string plugin_name_;
@@ -235,13 +235,13 @@ protected:
   rclcpp::Clock::SharedPtr clock_;
 
   double desired_linear_vel_, base_desired_linear_vel_;
-  double lookahead_dist_;
+  double lookahead_dist_, regulated_lookahead_dist_;
   double rotate_to_heading_angular_vel_;
   double max_lookahead_dist_;
   double min_lookahead_dist_;
   double lookahead_time_;
-  double max_linear_accel_;
-  double max_linear_decel_;
+  // double max_linear_accel_;
+  // double max_linear_decel_;
   bool use_velocity_scaled_lookahead_dist_;
   tf2::Duration transform_tolerance_;
   bool use_approach_vel_scaling_;
@@ -265,6 +265,12 @@ protected:
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> global_path_pub_;
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PointStamped>>
   carrot_pub_;
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PointStamped>>
+  closest_pub_;
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PointStamped>>
+  farthest_pub_;
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PointStamped>>
+  cusp_pub_;
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> carrot_arc_pub_;
 };
 

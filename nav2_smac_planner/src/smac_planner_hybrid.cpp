@@ -344,8 +344,35 @@ nav_msgs::msg::Path SmacPlannerHybrid::createPlan(
 #endif
 
   // Smooth plan
-  if (num_iterations > 1 && plan.poses.size() > 6) {
-    _smoother->smooth(plan, costmap, time_remaining);
+  // if (num_iterations > 1 && plan.poses.size() > 6) {
+  //   _smoother->smooth(plan, costmap, time_remaining);
+  // }
+  if (num_iterations > 1)
+  {
+    std::vector<unsigned int> cusps_id = findDirectionChange(plan);
+    std::cout << "Found " << cusps_id.size() - 2 << " cusp(s) on current path" << std::endl;
+    if (cusps_id.size() < 3 && plan.poses.size() > 6)
+    {
+        _smoother->smooth(plan, costmap, time_remaining);
+    }
+    else
+    {
+      for (unsigned int i = 1; i < cusps_id.size(); ++i)
+      {
+        if (cusps_id[i] - cusps_id[i-1] > 6)
+        {
+          nav_msgs::msg::Path subpath;
+          subpath.header = plan.header;
+          for (unsigned int poseid = cusps_id[i - 1]; poseid <= cusps_id[i]; ++poseid)
+          {
+            subpath.poses.push_back(plan.poses[cusps_id[i-1]]);
+          }
+          // subpath.poses = {plan.poses[cusps_id[i - 1]], plan.poses[cusps_id[i]]};
+          std::cout << "Smoothing path segment [" << cusps_id[i-1] << ", " << cusps_id[i] << "]. Segment size = " << subpath.poses.size() << std::endl;
+          _smoother->smooth(subpath, costmap, floor(time_remaining/(cusps_id.size() - 1)));
+        }
+      }
+    }
   }
 
 #ifdef BENCHMARK_TESTING

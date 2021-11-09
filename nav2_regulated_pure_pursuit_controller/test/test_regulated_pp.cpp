@@ -96,7 +96,8 @@ public:
   double findDirectionChangeWrapper(
     const geometry_msgs::msg::PoseStamped & pose)
   {
-    return findDirectionChange(pose);
+    geometry_msgs::msg::PoseStamped cusp;
+    return findDirectionChange(pose,cusp);
   }
 };
 

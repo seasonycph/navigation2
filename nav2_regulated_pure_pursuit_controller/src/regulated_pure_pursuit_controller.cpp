@@ -59,10 +59,10 @@ void RegulatedPurePursuitController::configure(
 
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".desired_linear_vel", rclcpp::ParameterValue(0.5));
-  declare_parameter_if_not_declared(
-    node, plugin_name_ + ".max_linear_accel", rclcpp::ParameterValue(2.5));
-  declare_parameter_if_not_declared(
-    node, plugin_name_ + ".max_linear_decel", rclcpp::ParameterValue(2.5));
+  // declare_parameter_if_not_declared(
+  //   node, plugin_name_ + ".max_linear_accel", rclcpp::ParameterValue(2.5));
+  // declare_parameter_if_not_declared(
+  //   node, plugin_name_ + ".max_linear_decel", rclcpp::ParameterValue(2.5));
   declare_parameter_if_not_declared(
     node, plugin_name_ + ".lookahead_dist", rclcpp::ParameterValue(0.6));
   declare_parameter_if_not_declared(
@@ -110,8 +110,8 @@ void RegulatedPurePursuitController::configure(
 
   node->get_parameter(plugin_name_ + ".desired_linear_vel", desired_linear_vel_);
   base_desired_linear_vel_ = desired_linear_vel_;
-  node->get_parameter(plugin_name_ + ".max_linear_accel", max_linear_accel_);
-  node->get_parameter(plugin_name_ + ".max_linear_decel", max_linear_decel_);
+  // node->get_parameter(plugin_name_ + ".max_linear_accel", max_linear_accel_);
+  // node->get_parameter(plugin_name_ + ".max_linear_decel", max_linear_decel_);
   node->get_parameter(plugin_name_ + ".lookahead_dist", lookahead_dist_);
   node->get_parameter(plugin_name_ + ".min_lookahead_dist", min_lookahead_dist_);
   node->get_parameter(plugin_name_ + ".max_lookahead_dist", max_lookahead_dist_);
@@ -177,6 +177,9 @@ void RegulatedPurePursuitController::configure(
 
   global_path_pub_ = node->create_publisher<nav_msgs::msg::Path>("received_global_plan", 1);
   carrot_pub_ = node->create_publisher<geometry_msgs::msg::PointStamped>("lookahead_point", 1);
+  closest_pub_ = node->create_publisher<geometry_msgs::msg::PointStamped>("closest_point", 1);
+  farthest_pub_ = node->create_publisher<geometry_msgs::msg::PointStamped>("farthest_point", 1);
+  cusp_pub_ = node->create_publisher<geometry_msgs::msg::PointStamped>("cusp_point", 1);
   carrot_arc_pub_ = node->create_publisher<nav_msgs::msg::Path>("lookahead_collision_arc", 1);
 }
 
@@ -189,6 +192,9 @@ void RegulatedPurePursuitController::cleanup()
     plugin_name_.c_str());
   global_path_pub_.reset();
   carrot_pub_.reset();
+  closest_pub_.reset();
+  farthest_pub_.reset();
+  cusp_pub_.reset();
   carrot_arc_pub_.reset();
 }
 
@@ -201,6 +207,9 @@ void RegulatedPurePursuitController::activate()
     plugin_name_.c_str());
   global_path_pub_->on_activate();
   carrot_pub_->on_activate();
+  closest_pub_->on_activate();
+  farthest_pub_->on_activate();
+  cusp_pub_->on_activate();
   carrot_arc_pub_->on_activate();
 }
 
@@ -213,6 +222,9 @@ void RegulatedPurePursuitController::deactivate()
     plugin_name_.c_str());
   global_path_pub_->on_deactivate();
   carrot_pub_->on_deactivate();
+  closest_pub_->on_deactivate();
+  farthest_pub_->on_deactivate();
+  cusp_pub_->on_deactivate();
   carrot_arc_pub_->on_deactivate();
 }
 
@@ -261,17 +273,28 @@ geometry_msgs::msg::TwistStamped RegulatedPurePursuitController::computeVelocity
   double lookahead_dist = getLookAheadDistance(speed);
 
   // Check for reverse driving
+  bool found_cusp = false;
+  geometry_msgs::msg::PoseStamped cusp;
   if (allow_reversing_) {
     // Cusp check
-    double dist_to_direction_change = findDirectionChange(pose);
+    double dist_to_direction_change = findDirectionChange(pose,cusp);
 
     // if the lookahead distance is further than the cusp, use the cusp distance instead
     if (dist_to_direction_change < lookahead_dist) {
       lookahead_dist = dist_to_direction_change;
+      found_cusp = true;
     }
   }
+  regulated_lookahead_dist_ = lookahead_dist;
 
   auto carrot_pose = getLookAheadPoint(lookahead_dist, transformed_plan);
+  if (found_cusp)
+  {
+    geometry_msgs::msg::PoseStamped local_cusp;
+    cusp.header.stamp = pose.header.stamp;
+    transformPose(costmap_ros_->getBaseFrameID(),cusp,local_cusp);
+    carrot_pose = local_cusp;
+  }
   carrot_pub_->publish(createCarrotMsg(carrot_pose));
 
   double linear_vel, angular_vel;
@@ -476,7 +499,7 @@ double RegulatedPurePursuitController::costAtPose(const double & x, const double
 
 void RegulatedPurePursuitController::applyConstraints(
   const double & dist_error, const double & lookahead_dist,
-  const double & curvature, const geometry_msgs::msg::Twist & curr_speed,
+  const double & curvature, const geometry_msgs::msg::Twist & /*curr_speed*/,
   const double & pose_cost, double & linear_vel, double & sign)
 {
   double curvature_vel = linear_vel;
@@ -523,12 +546,14 @@ void RegulatedPurePursuitController::applyConstraints(
     linear_vel = std::min(linear_vel, approach_vel);
   }
 
-  // Limit linear velocities to be valid and kinematically feasible, v = v0 + a * dt
-  linear_vel = sign * linear_vel;
-  double & dt = control_duration_;
-  const double max_feasible_linear_speed = curr_speed.linear.x + max_linear_accel_ * dt;
-  const double min_feasible_linear_speed = curr_speed.linear.x - max_linear_decel_ * dt;
-  linear_vel = std::clamp(linear_vel, min_feasible_linear_speed, max_feasible_linear_speed);
+  // // Limit linear velocities to be valid and kinematically feasible, v = v0 + a * dt
+  // linear_vel = sign * linear_vel;
+  // double & dt = control_duration_;
+  // const double max_feasible_linear_speed = curr_speed.linear.x + max_linear_accel_ * dt;
+  // const double min_feasible_linear_speed = curr_speed.linear.x - max_linear_decel_ * dt;
+  // linear_vel = std::clamp(linear_vel, min_feasible_linear_speed, max_feasible_linear_speed);
+  
+  // Limit linear velocities to be valid
   linear_vel = std::clamp(fabs(linear_vel), 0.0, desired_linear_vel_);
   linear_vel = sign * linear_vel;
 }
@@ -582,12 +607,16 @@ nav_msgs::msg::Path RegulatedPurePursuitController::transformGlobalPlan(
       return euclidean_distance(robot_pose, ps);
     });
 
+  closest_pub_->publish(createCarrotMsg(*transformation_begin));
+
   // Find points definitely outside of the costmap so we won't transform them.
   auto transformation_end = std::find_if(
     transformation_begin, end(global_plan_.poses),
     [&](const auto & global_plan_pose) {
       return euclidean_distance(robot_pose, global_plan_pose) > max_transform_dist;
     });
+
+  farthest_pub_->publish(createCarrotMsg(*transformation_end));
 
   // Lambda to transform a PoseStamped from global frame to local
   auto transformGlobalPoseToLocal = [&](const auto & global_plan_pose) {
@@ -621,7 +650,7 @@ nav_msgs::msg::Path RegulatedPurePursuitController::transformGlobalPlan(
 }
 
 double RegulatedPurePursuitController::findDirectionChange(
-  const geometry_msgs::msg::PoseStamped & pose)
+  const geometry_msgs::msg::PoseStamped & pose, geometry_msgs::msg::PoseStamped & cusp)
 {
   // Iterating through the global path to determine the position of the cusp
   for (unsigned int pose_id = 1; pose_id < global_plan_.poses.size() - 1; ++pose_id) {
@@ -641,6 +670,8 @@ double RegulatedPurePursuitController::findDirectionChange(
     if ( (oa_x * ab_x) + (oa_y * ab_y) < 0.0) {
       auto x = global_plan_.poses[pose_id].pose.position.x - pose.pose.position.x;
       auto y = global_plan_.poses[pose_id].pose.position.y - pose.pose.position.y;
+      cusp = global_plan_.poses[pose_id];
+      cusp_pub_->publish(createCarrotMsg(global_plan_.poses[pose_id]));
       return hypot(x, y);  // returning the distance if there is a cusp
     }
   }
