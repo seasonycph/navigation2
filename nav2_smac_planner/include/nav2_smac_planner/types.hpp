@@ -54,6 +54,7 @@ struct SmootherParams
    * @brief A constructor for nav2_smac_planner::SmootherParams
    */
   SmootherParams()
+  : holonomic_(false)
   {
   }
 
@@ -85,6 +86,7 @@ struct SmootherParams
   int max_its_;
   double w_data_;
   double w_smooth_;
+  bool holonomic_;
 };
 
 }  // namespace nav2_smac_planner

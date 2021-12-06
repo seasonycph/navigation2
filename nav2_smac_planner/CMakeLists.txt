@@ -21,6 +21,7 @@ find_package(nav2_costmap_2d REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(angles REQUIRED)
 find_package(ompl REQUIRED)
 find_package(OpenMP REQUIRED)
 
@@ -74,6 +75,7 @@ add_library(${library_name} SHARED
   src/smac_planner_hybrid.cpp
   src/a_star.cpp
   src/node_hybrid.cpp
+  src/smoother.cpp
   src/costmap_downsampler.cpp
   src/node_2d.cpp
 )
@@ -90,6 +92,7 @@ add_library(${library_name}_2d SHARED
   src/smac_planner_2d.cpp
   src/a_star.cpp
   src/node_hybrid.cpp
+  src/smoother.cpp
   src/costmap_downsampler.cpp
   src/node_2d.cpp
 )
