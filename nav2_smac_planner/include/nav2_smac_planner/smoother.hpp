@@ -23,6 +23,7 @@
 #include <utility>
 
 #include "nav2_smac_planner/types.hpp"
+#include "nav2_smac_planner/utils.hpp"
 #include "nav2_util/geometry_utils.hpp"
 #include "nav_msgs/msg/path.hpp"
 
@@ -68,12 +69,37 @@ public:
    * @param max_time Maximum time to compute, stop early if over limit
    * @return If smoothing was successful
    */
-  bool smooth(
+bool smooth(
     nav_msgs::msg::Path & path,
     const nav2_costmap_2d::Costmap2D * costmap,
     const double & max_time,
-    const bool do_refinement = true)
+    const bool do_refinement = true, const bool single_dir_segment = false)
   {
+    if (!single_dir_segment) {
+      // Check if there are any cusps and if so, split path to avoid smoothing cusps
+      // findDirectionChange returns initial and final path poses' indices plus cusps', if any
+      std::vector<unsigned int> cusps_id = findDirectionChange(path);
+      if (cusps_id.size() < 3 && path.poses.size() > 6) {
+        // cusps_id < 3 means that the vector only contains initial and final path poses' indices
+        // i.e. no cusps in between were found
+          return smooth(path, costmap, max_time, do_refinement, true);
+      } else {
+        bool ret = true;
+        for (unsigned int i = 1; i < cusps_id.size(); ++i) {
+          if (cusps_id[i] - cusps_id[i - 1] > 6) {
+            nav_msgs::msg::Path subpath;
+            subpath.header = path.header;
+            std::copy(
+              path.poses.begin() + cusps_id[i - 1],
+              path.poses.begin() + cusps_id[i] + 1, std::back_inserter(subpath.poses));
+            if (!smooth(subpath, costmap, floor(max_time / (cusps_id.size() - 1)), do_refinement, true))
+              ret = false;
+          }
+        }
+        return ret;
+      }
+    }
+
     using namespace std::chrono;  // NOLINT
     steady_clock::time_point a = steady_clock::now();
     rclcpp::Duration max_dur = rclcpp::Duration::from_seconds(max_time);
@@ -186,6 +212,7 @@ public:
     path = new_path;
     return true;
   }
+
 
 protected:
   inline double getFieldByDim(const geometry_msgs::msg::PoseStamped & msg, const unsigned int & dim)
