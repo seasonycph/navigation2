@@ -47,6 +47,7 @@ set(dependencies
   behaviortree_cpp_v3
 )
 
+set(BUILD_TESTING 0)
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
