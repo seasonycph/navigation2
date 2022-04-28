@@ -28,7 +28,9 @@ NavigateToPoseNavigator::configure(
 {
   start_time_ = rclcpp::Time(0);
   auto node = parent_node.lock();
-  node->declare_parameter("goal_blackboard_id", std::string("goal"));
+  if (!node->has_parameter("goal_blackboard_id")) {
+    node->declare_parameter("goal_blackboard_id", std::string("goal"));
+  }
   goal_blackboard_id_ = node->get_parameter("goal_blackboard_id").as_string();
   if (!node->has_parameter("path_blackboard_id")) {
     node->declare_parameter("path_blackboard_id", std::string("path"));

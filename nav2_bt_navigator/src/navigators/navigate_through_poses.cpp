@@ -28,7 +28,9 @@ NavigateThroughPosesNavigator::configure(
 {
   start_time_ = rclcpp::Time(0);
   auto node = parent_node.lock();
-  node->declare_parameter("goals_blackboard_id", std::string("goals"));
+  if (!node->has_parameter("goals_blackboard_id")) {
+    node->declare_parameter("goals_blackboard_id", std::string("goals"));
+  }
   goals_blackboard_id_ = node->get_parameter("goals_blackboard_id").as_string();
   if (!node->has_parameter("path_blackboard_id")) {
     node->declare_parameter("path_blackboard_id", std::string("path"));
