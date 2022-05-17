@@ -94,16 +94,16 @@ public:
     completion_callback_(completion_callback),
     server_timeout_(server_timeout)
   {
-    using namespace std::placeholders;  // NOLINT
+    // using namespace std::placeholders;  // NOLINT
     action_server_ = rclcpp_action::create_server<ActionT>(
       node_base_interface_,
       node_clock_interface_,
       node_logging_interface_,
       node_waitables_interface_,
       action_name_,
-      std::bind(&SimpleActionServer::handle_goal, this, _1, _2),
-      std::bind(&SimpleActionServer::handle_cancel, this, _1),
-      std::bind(&SimpleActionServer::handle_accepted, this, _1));
+      std::bind(&SimpleActionServer::handle_goal, this, std::placeholders::_1, std::placeholders::_2),
+      std::bind(&SimpleActionServer::handle_cancel, this, std::placeholders::_1),
+      std::bind(&SimpleActionServer::handle_accepted, this, std::placeholders::_1));
   }
 
   /**
