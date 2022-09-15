@@ -186,6 +186,7 @@ protected:
    * @brief Whether point is in collision
    * @param x Pose of pose x
    * @param y Pose of pose y
+   * @param theta orientation of Yaw
    * @return Whether in collision
    */
   bool inCollision(const double & x, const double & y);
@@ -240,8 +241,6 @@ protected:
   double max_lookahead_dist_;
   double min_lookahead_dist_;
   double lookahead_time_;
-  double max_linear_accel_;
-  double max_linear_decel_;
   bool use_velocity_scaled_lookahead_dist_;
   tf2::Duration transform_tolerance_;
   bool use_approach_vel_scaling_;

@@ -318,8 +318,12 @@ void VoxelLayer::raytraceFreespace(
   if (!worldToMap3DFloat(ox, oy, oz, sensor_x, sensor_y, sensor_z)) {
     RCLCPP_WARN(
       logger_,
-      "Sensor origin: (%.2f, %.2f, %.2f), out of map bounds. The costmap can't raytrace for it.",
-      ox, oy, oz);
+      "Sensor origin at (%.2f, %.2f %.2f) is out of map bounds (%.2f, %.2f, %.2f) to (%.2f, %.2f, %.2f). "
+      "The costmap cannot raytrace for it.",
+      ox, oy, oz,
+      ox + getSizeInMetersX(), oy + getSizeInMetersY(), oz + getSizeInMetersZ(),
+      origin_x_, origin_y_, origin_z_);
+
     return;
   }
 
@@ -333,13 +337,11 @@ void VoxelLayer::raytraceFreespace(
     publish_clearing_points = (node->count_subscribers("clearing_endpoints") > 0);
   }
 
-  if (publish_clearing_points) {
-    clearing_endpoints_->data.clear();
-    clearing_endpoints_->width = clearing_observation.cloud_->width;
-    clearing_endpoints_->height = clearing_observation.cloud_->height;
-    clearing_endpoints_->is_dense = true;
-    clearing_endpoints_->is_bigendian = false;
-  }
+  clearing_endpoints_->data.clear();
+  clearing_endpoints_->width = clearing_observation.cloud_->width;
+  clearing_endpoints_->height = clearing_observation.cloud_->height;
+  clearing_endpoints_->is_dense = true;
+  clearing_endpoints_->is_bigendian = false;
 
   sensor_msgs::PointCloud2Modifier modifier(*clearing_endpoints_);
   modifier.setPointCloud2Fields(
