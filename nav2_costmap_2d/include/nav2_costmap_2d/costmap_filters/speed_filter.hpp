@@ -42,10 +42,15 @@
 #include <string>
 
 #include "nav2_costmap_2d/costmap_filters/costmap_filter.hpp"
+#include "nav2_costmap_2d/footprint.hpp"
 
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav2_msgs/msg/costmap_filter_info.hpp"
 #include "nav2_msgs/msg/speed_limit.hpp"
+
+#include "nav2_util/line_iterator.hpp"
+
+#include "rcl_interfaces/msg/set_parameters_result.hpp"
 
 namespace nav2_costmap_2d
 {
@@ -118,6 +123,16 @@ protected:
   inline int8_t getMaskData(
     const unsigned int mx, const unsigned int my) const;
 
+  // Dynamic parameters handler
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
+
+  /**
+   * @brief Callback executed when a paramter change is detected
+   * @param parameters list of changed parameters
+   */
+  rcl_interfaces::msg::SetParametersResult
+  dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters);
+
 private:
   /**
    * @brief Callback for the filter information
@@ -128,10 +143,25 @@ private:
    */
   void maskCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);
 
+  /**
+   * @brief Find the footprint cost in oriented footprint
+   */
+  int8_t footprintCost(const std::vector<geometry_msgs::msg::Point> footprint);
+  /**
+   * @brief Find the footprint cost a a post with an unoriented footprint
+   */
+  int8_t footprintCostAtPose(double x, double y, double theta, const std::vector<geometry_msgs::msg::Point> footprint);
+  /**
+   * @brief Get the cost for a line segment
+   */
+  int8_t lineCost(int x0, int x1, int y0, int y1) const;
+
   rclcpp::Subscription<nav2_msgs::msg::CostmapFilterInfo>::SharedPtr filter_info_sub_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr mask_sub_;
 
   rclcpp_lifecycle::LifecyclePublisher<nav2_msgs::msg::SpeedLimit>::SharedPtr speed_limit_pub_;
+  rclcpp_lifecycle::LifecyclePublisher<geometry_msgs::msg::PolygonStamped>::SharedPtr
+    footprint_pub_;
 
   nav_msgs::msg::OccupancyGrid::SharedPtr filter_mask_;
 
@@ -141,6 +171,8 @@ private:
   double base_, multiplier_;
   bool percentage_;
   double speed_limit_, speed_limit_prev_;
+  std::string footprint_;
+  std::vector<geometry_msgs::msg::Point> footprint_points;
 };
 
 }  // namespace nav2_costmap_2d

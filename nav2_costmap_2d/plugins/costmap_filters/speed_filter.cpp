@@ -51,7 +51,7 @@ namespace nav2_costmap_2d
 
 SpeedFilter::SpeedFilter()
 : filter_info_sub_(nullptr), mask_sub_(nullptr),
-  speed_limit_pub_(nullptr), filter_mask_(nullptr), mask_frame_(""), global_frame_(""),
+  speed_limit_pub_(nullptr), footprint_pub_(nullptr), filter_mask_(nullptr), mask_frame_(""), global_frame_(""),
   speed_limit_(NO_SPEED_LIMIT), speed_limit_prev_(NO_SPEED_LIMIT)
 {
 }
@@ -69,7 +69,10 @@ void SpeedFilter::initializeFilter(
   // Declare "speed_limit_topic" parameter specific to SpeedFilter only
   std::string speed_limit_topic;
   declareParameter("speed_limit_topic", rclcpp::ParameterValue("speed_limit"));
+  declareParameter("footprint_padding", rclcpp::ParameterValue(0.01f));
+  declareParameter("footprint", rclcpp::ParameterValue(std::string("[]")));
   node->get_parameter(name_ + "." + "speed_limit_topic", speed_limit_topic);
+  node->get_parameter(name_ + "." + "footprint", footprint_);
 
   filter_info_topic_ = filter_info_topic;
   // Setting new costmap filter info subscriber
@@ -81,6 +84,9 @@ void SpeedFilter::initializeFilter(
     filter_info_topic_, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable(),
     std::bind(&SpeedFilter::filterInfoCallback, this, std::placeholders::_1));
 
+  dyn_params_handler_ = node->add_on_set_parameters_callback(
+    std::bind(&SpeedFilter::dynamicParametersCallback, this, std::placeholders::_1));
+
   // Get global frame required for speed limit publisher
   global_frame_ = layered_costmap_->getGlobalFrameID();
 
@@ -89,10 +95,28 @@ void SpeedFilter::initializeFilter(
     speed_limit_topic, rclcpp::QoS(10));
   speed_limit_pub_->on_activate();
 
+  footprint_pub_ = node->create_publisher<geometry_msgs::msg::PolygonStamped>(
+    "speed_limit_footprint", rclcpp::SystemDefaultsQoS());
+  footprint_pub_->on_activate();
+
   // Reset speed conversion states
   base_ = BASE_DEFAULT;
   multiplier_ = MULTIPLIER_DEFAULT;
   percentage_ = false;
+
+  if (footprint_ != "" && footprint_ != "[]") {
+    // Footprint parameter has been specified, try to convert it
+    footprint_points.clear();
+    if (makeFootprintFromString(footprint_, footprint_points)) {
+      // The specified footprint is valid, so we'll use that instead of the radius
+      RCLCPP_INFO(logger_, "SpeedFilter: Initialized footprint");
+    } else {
+      // Footprint provided but invalid, so stay with the radius
+      RCLCPP_ERROR(
+        logger_, "SpeedFilter: The footprint parameter is invalid: \"%s\"",
+        footprint_.c_str());
+    }
+  }
 }
 
 void SpeedFilter::filterInfoCallback(
@@ -266,9 +290,26 @@ void SpeedFilter::process(
     return;
   }
 
+  int8_t speed_mask_data;
+  if (footprint_points.size() > 0) {
+    auto footprint = std::make_unique<geometry_msgs::msg::PolygonStamped>();
+        // footprint->header = pose.header;
+        footprint->header.frame_id = global_frame_;
+        footprint->header.stamp = clock_->now();
+        transformFootprint(pose.x, pose.y, pose.theta, footprint_points, *footprint);
+    footprint_pub_->publish(std::move(footprint));
+    
+    speed_mask_data= footprintCostAtPose(mask_pose.x, mask_pose.y, mask_pose.theta, footprint_points);
+    // RCLCPP_INFO(logger_, "SpeedFilter: Speed mask data footprint: %d", speed_mask_data);
+  } else {
+    RCLCPP_WARN(logger_, "SpeedFilter: footprint is empty, using the center of the robot");
+    speed_mask_data = getMaskData(mask_robot_i, mask_robot_j);
+  }
+
   // Getting filter_mask data from cell where the robot placed and
   // calculating speed limit value
-  int8_t speed_mask_data = getMaskData(mask_robot_i, mask_robot_j);
+  // int8_t speed_mask_data = getMaskData(mask_robot_i, mask_robot_j); // HEEERE
+  // RCLCPP_INFO(logger_, "SpeedFilter: Speed mask data original: %d", speed_mask_data);
   if (speed_mask_data == SPEED_MASK_NO_LIMIT) {
     // Corresponding filter mask cell is free.
     // Setting no speed limit there.
@@ -336,6 +377,10 @@ void SpeedFilter::resetFilter()
     speed_limit_pub_->on_deactivate();
     speed_limit_pub_.reset();
   }
+  if (footprint_pub_) {
+    footprint_pub_->on_deactivate();
+    footprint_pub_.reset();
+  }
 }
 
 bool SpeedFilter::isActive()
@@ -346,6 +391,97 @@ bool SpeedFilter::isActive()
     return true;
   }
   return false;
+}
+
+int8_t SpeedFilter::footprintCost(const std::vector<geometry_msgs::msg::Point> footprint)
+{
+  // now we really have to lay down the footprint in the costmap_ grid
+  unsigned int x0, x1, y0, y1;
+  int8_t footprint_cost = 0;
+
+  // get the cell coord of the first point
+  if (!worldToMask(footprint[0].x, footprint[0].y, x0, y0)) {
+    return SPEED_MASK_UNKNOWN;
+  }
+
+  // cache the start to eliminate a worldToMap call
+  unsigned int xstart = x0;
+  unsigned int ystart = y0;
+
+  // we need to rasterize each line in the footprint
+  for (unsigned int i = 0; i < footprint.size() - 1; ++i) {
+    // get the cell coord of the second point
+    if (!worldToMask(footprint[i + 1].x, footprint[i + 1].y, x1, y1)) {
+      return SPEED_MASK_UNKNOWN;
+    }
+
+    footprint_cost = std::max(lineCost(x0, x1, y0, y1), footprint_cost);
+
+    // the second point is next iteration's first point
+    x0 = x1;
+    y0 = y1;
+  }
+
+  // we also need to connect the first point in the footprint to the last point
+  // the last iteration's x1, y1 are the last footprint point's coordinates
+  return std::max(lineCost(xstart, x1, ystart, y1), footprint_cost);
+}
+
+int8_t SpeedFilter::lineCost(int x0, int x1, int y0, int y1) const
+{
+  double line_cost = 0.0;
+  double point_cost = -1.0;
+
+  for (nav2_util::LineIterator line(x0, y0, x1, y1); line.isValid(); line.advance()) {
+    point_cost = getMaskData(line.getX(), line.getY());
+    // point_cost = pointCost(line.getX(), line.getY());   // Score the current point
+
+    if (line_cost < point_cost) {
+      line_cost = point_cost;
+    }
+  }
+
+  return line_cost;
+}
+
+int8_t SpeedFilter::footprintCostAtPose(
+  double x, double y, double theta, const std::vector<geometry_msgs::msg::Point> footprint)
+{
+  double cos_th = cos(theta);
+  double sin_th = sin(theta);
+  std::vector<geometry_msgs::msg::Point> oriented_footprint;
+  for (unsigned int i = 0; i < footprint.size(); ++i) {
+    geometry_msgs::msg::Point new_pt;
+    new_pt.x = x + (footprint[i].x * cos_th - footprint[i].y * sin_th);
+    new_pt.y = y + (footprint[i].x * sin_th + footprint[i].y * cos_th);
+    oriented_footprint.push_back(new_pt);
+  }
+
+  return footprintCost(oriented_footprint);
+}
+
+rcl_interfaces::msg::SetParametersResult
+SpeedFilter::dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters)
+{
+  auto result = rcl_interfaces::msg::SetParametersResult();
+
+  for (auto parameter : parameters) {
+    const auto & type = parameter.get_type();
+    const auto & name = parameter.get_name();
+
+    if (type == rclcpp::ParameterType::PARAMETER_STRING) {
+      if (name == (name_ + "." + "footprint")) {
+        footprint_ = parameter.as_string();
+        footprint_points.clear();
+        if (makeFootprintFromString(footprint_, footprint_points)) {
+          RCLCPP_INFO(logger_, "SpeedFilter: Successfully set footprint");
+        }
+      }
+    }
+  }
+
+  result.successful = true;
+  return result;
 }
 
 }  // namespace nav2_costmap_2d
