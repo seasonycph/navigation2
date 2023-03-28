@@ -63,9 +63,12 @@ ControllerServer::ControllerServer(const rclcpp::NodeOptions & options)
   // The costmap node is used in the implementation of the controller
   costmap_ros_ = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
     "local_costmap", std::string{get_namespace()}, "local_costmap");
+  speed_costmap_ros_ = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
+    "speed_limit_costmap", std::string{get_namespace()}, "speed_limit_costmap");
 
   // Launch a thread to run the costmap node
   costmap_thread_ = std::make_unique<nav2_util::NodeThread>(costmap_ros_);
+  speed_costmap_thread_ = std::make_unique<nav2_util::NodeThread>(speed_costmap_ros_);
 }
 
 ControllerServer::~ControllerServer()
@@ -74,6 +77,7 @@ ControllerServer::~ControllerServer()
   goal_checkers_.clear();
   controllers_.clear();
   costmap_thread_.reset();
+  speed_costmap_thread_.reset();
 }
 
 nav2_util::CallbackReturn
@@ -123,6 +127,7 @@ ControllerServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
   get_parameter("failure_tolerance", failure_tolerance_);
 
   costmap_ros_->configure();
+  speed_costmap_ros_->configure();
 
   try {
     progress_checker_type_ = nav2_util::get_plugin_type_param(node, progress_checker_id_);
@@ -218,6 +223,7 @@ ControllerServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
   RCLCPP_INFO(get_logger(), "Activating");
 
   costmap_ros_->activate();
+  speed_costmap_ros_->activate();
   ControllerMap::iterator it;
   for (it = controllers_.begin(); it != controllers_.end(); ++it) {
     it->second->activate();
@@ -247,6 +253,7 @@ ControllerServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
     it->second->deactivate();
   }
   costmap_ros_->deactivate();
+  speed_costmap_ros_->deactivate();
 
   publishZeroVelocity();
   vel_publisher_->on_deactivate();
@@ -272,6 +279,7 @@ ControllerServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 
   goal_checkers_.clear();
   costmap_ros_->cleanup();
+  speed_costmap_ros_->cleanup();
 
   // Release any allocated resources
   action_server_.reset();
