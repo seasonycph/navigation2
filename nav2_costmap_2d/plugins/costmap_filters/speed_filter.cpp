@@ -45,6 +45,7 @@
 #include "geometry_msgs/msg/point_stamped.hpp"
 
 #include "nav2_costmap_2d/costmap_filters/filter_values.hpp"
+#include "nav_2d_utils/conversions.hpp"
 
 namespace nav2_costmap_2d
 {
@@ -207,12 +208,10 @@ bool SpeedFilter::transformPose(
     // Transform (pose.x, pose.y) point from current layer frame (global_frame_)
     // to mask_pose point in mask_frame_
     geometry_msgs::msg::TransformStamped transform;
-    geometry_msgs::msg::PointStamped in, out;
+    geometry_msgs::msg::PoseStamped in, out;
     in.header.stamp = clock_->now();
     in.header.frame_id = global_frame_;
-    in.point.x = pose.x;
-    in.point.y = pose.y;
-    in.point.z = 0;
+    in.pose = nav_2d_utils::pose2DToPose(pose);
 
     try {
       tf_->transform(in, out, mask_frame_, transform_tolerance_);
@@ -224,8 +223,7 @@ bool SpeedFilter::transformPose(
         global_frame_.c_str(), mask_frame_.c_str(), ex.what());
       return false;
     }
-    mask_pose.x = out.point.x;
-    mask_pose.y = out.point.y;
+    mask_pose = nav_2d_utils::poseToPose2D(out.pose);
   } else {
     // Filter mask and current layer are in the same frame:
     // Just use pose coordinates
@@ -308,8 +306,9 @@ void SpeedFilter::process(
 
   // Getting filter_mask data from cell where the robot placed and
   // calculating speed limit value
-  // int8_t speed_mask_data = getMaskData(mask_robot_i, mask_robot_j); // HEEERE
-  // RCLCPP_INFO(logger_, "SpeedFilter: Speed mask data original: %d", speed_mask_data);
+  // int8_t speed_mask_dataori = getMaskData(mask_robot_i, mask_robot_j); // HEEERE
+  // RCLCPP_INFO(logger_, "SpeedFilter: Speed mask data footprint: %d", speed_mask_data);
+  // RCLCPP_INFO(logger_, "SpeedFilter: Speed mask data original: %d", speed_mask_dataori);
   if (speed_mask_data == SPEED_MASK_NO_LIMIT) {
     // Corresponding filter mask cell is free.
     // Setting no speed limit there.

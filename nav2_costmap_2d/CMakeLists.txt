@@ -23,6 +23,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(angles REQUIRED)
+find_package(nav_2d_utils REQUIRED)
 
 remove_definitions(-DDISABLE_LIBUSB-1.0)
 find_package(Eigen3 REQUIRED)
@@ -59,6 +60,7 @@ set(dependencies
   message_filters
   nav2_msgs
   nav2_util
+  nav_2d_utils
   nav2_voxel_grid
   nav_msgs
   pluginlib
